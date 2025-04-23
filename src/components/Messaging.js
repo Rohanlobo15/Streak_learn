@@ -558,6 +558,13 @@ export default function Messaging() {
           </form>
         </div>
       </div>
+      <nav className="sidebar-nav">
+        <ul>
+          <li><button className="nav-button" onClick={() => navigate('/dashboard')}>🏠 <span>Dashboard</span></button></li>
+          <li><button className="nav-button active" onClick={() => navigate('/messaging')}>✉️ <span>Messages</span></button></li>
+          <li><button className="nav-button" onClick={() => navigate('/files')}>📂 <span>Files</span></button></li>
+        </ul>
+      </nav>
     </div>
   );
 }

@@ -21,6 +21,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileSectionOpen, setProfileSectionOpen] = useState(false);
   // Set chart theme colors
   const chartColors = {
     primary: '#4a6bff',
@@ -723,6 +724,27 @@ export default function Dashboard() {
     }
   };
 
+  // Toggle sidebar
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
+  // Close sidebar when clicking outside
+  const handleOutsideClick = (e) => {
+    // If sidebar is open and the click is outside the sidebar
+    if (sidebarOpen && !e.target.closest('.sidebar') && !e.target.closest('.hamburger-menu')) {
+      setSidebarOpen(false);
+    }
+  };
+
+  // Add event listener for outside clicks
+  useEffect(() => {
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [sidebarOpen]);
+
   // Calculate total study hours
   const calculateTotalHours = () => {
     if (!studyTimeData.data.length) return 0;
@@ -983,57 +1005,70 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-container">
-      {/* Header Section */}
-      <div className="dashboard-header">
+      {/* Header */}
+      <header className="dashboard-header">
         <div className="header-left">
-          <button className="menu-button" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            ☰
+          <button 
+            className="hamburger-menu" 
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle menu"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
           </button>
-          <h1 className="dashboard-title">Streak Learn</h1>
+          <h2>Streak Learn</h2>
         </div>
-        <div className="user-info">
-          <p>Welcome, <span className="user-role">{currentUser?.role}</span></p>
-          <div className="header-buttons">
-            <button className="history-button" onClick={() => setShowHistoryModal(true)}>
-              View History
-            </button>
-            <button className="logout-button" onClick={handleLogout} disabled={loading}>
-              Logout
-            </button>
-          </div>
+        <div className="header-right">
+          <button className="logout-button" onClick={handleLogout}>Logout</button>
         </div>
-      </div>
+      </header>
       
       {/* Sidebar */}
       <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <button 
+          className="close-sidebar-button" 
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Close sidebar"
+        >
+          &times;
+        </button>
         <div className="sidebar-header">
-          <div className="user-avatar">
-            <label htmlFor="profile-upload" className="avatar-upload">
-              <div className="avatar-circle">
-                {currentUser?.photoURL ? (
-                  <img src={currentUser.photoURL} alt="Profile" className="profile-image" />
-                ) : (
-                  <span>+</span>
-                )}
-              </div>
+          <div className="profile-section">
+            <div className="profile-photo-container">
+              {currentUser?.photoURL ? (
+                <img 
+                  src={currentUser.photoURL} 
+                  alt="Profile" 
+                  className="profile-photo" 
+                />
+              ) : (
+                <div className="profile-photo-placeholder">
+                  {currentUser?.email?.charAt(0).toUpperCase() || '?'}
+                </div>
+              )}
               <input 
                 type="file" 
-                id="profile-upload" 
-                className="profile-upload-input" 
-                accept="image/*" 
-                onChange={handleProfilePhotoUpload} 
+                id="profile-photo-upload" 
+                style={{ display: 'none' }} 
+                onChange={handleProfilePhotoUpload}
+                accept="image/*"
               />
-            </label>
-          </div>
-          <div className="sidebar-user-info">
-            <h3>{currentUser?.role || 'User'}</h3>
-            <p className="user-email text-center">{currentUser?.email}</p>
+              <label htmlFor="profile-photo-upload" className="profile-photo-label">
+                Change Photo
+              </label>
+            </div>
+            <div className="sidebar-user-info">
+              <h3>{currentUser?.role || 'User'}</h3>
+              <p className="user-email text-center">{currentUser?.email}</p>
+            </div>
           </div>
         </div>
         <nav className="sidebar-nav">
           <ul>
-            <li><button className="nav-button" onClick={() => navigate('/dashboard')}>🏠 <span>Dashboard</span></button></li>
+            <li><button className="nav-button active" onClick={() => navigate('/dashboard')}>🏠 <span>Dashboard</span></button></li>
             <li><button className="nav-button" onClick={() => navigate('/messaging')}>✉️ <span>Messages</span></button></li>
+            <li><button className="nav-button" onClick={() => navigate('/files')}>📂 <span>Files</span></button></li>
           </ul>
         </nav>
       </div>
