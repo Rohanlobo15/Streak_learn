@@ -90,7 +90,8 @@ export function AuthProvider({ children }) {
     currentUser,
     signup,
     login,
-    logout
+    logout,
+    setCurrentUser
   };
 
   return (

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { db } from '../firebase';
+import { db, storage } from '../firebase';
 import { 
   collection, 
   doc, 
@@ -11,6 +11,7 @@ import {
   Timestamp,
   onSnapshot
 } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import './Dashboard.css';
@@ -47,7 +48,7 @@ export default function Dashboard() {
       'rgba(108, 117, 125, 1)',
     ]
   };
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, setCurrentUser } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -649,12 +650,48 @@ export default function Dashboard() {
 
   // Handle logout
   const handleLogout = async () => {
+    setError('');
     try {
-      setError('');
       await logout();
       navigate('/login');
     } catch (error) {
       setError('Failed to log out');
+    }
+  };
+
+  // Handle profile photo upload
+  const handleProfilePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      // Create a storage reference
+      const storageRef = ref(storage, `profile-photos/${currentUser.uid}`);
+      
+      // Upload the file
+      await uploadBytes(storageRef, file);
+      
+      // Get the download URL
+      const photoURL = await getDownloadURL(storageRef);
+      
+      // Update the user document in Firestore with the photo URL
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      await setDoc(userDocRef, { photoURL }, { merge: true });
+      
+      // Update the local state to reflect the change without requiring a page refresh
+      setCurrentUser(prevUser => ({
+        ...prevUser,
+        photoURL
+      }));
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Error uploading profile photo:', error);
+      setError('Failed to upload profile photo');
+      setLoading(false);
     }
   };
 
@@ -709,10 +746,6 @@ export default function Dashboard() {
     ],
   };
 
-  // Prepare data for study hours chart (left side, 0-10)
-  
-
-  // Prepare data for study time chart
   const studyTimeChartData = {
     labels: studyTimeData.labels.slice(-30).map(formatDateToMonthDay), // Last 30 days
     datasets: [
@@ -920,21 +953,32 @@ export default function Dashboard() {
       <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
           <div className="user-avatar">
-            <div className="avatar-circle"></div>
+            <label htmlFor="profile-upload" className="avatar-upload">
+              <div className="avatar-circle">
+                {currentUser?.photoURL ? (
+                  <img src={currentUser.photoURL} alt="Profile" className="profile-image" />
+                ) : (
+                  <span>+</span>
+                )}
+              </div>
+              <input 
+                type="file" 
+                id="profile-upload" 
+                className="profile-upload-input" 
+                accept="image/*" 
+                onChange={handleProfilePhotoUpload} 
+              />
+            </label>
           </div>
           <div className="sidebar-user-info">
             <h3>{currentUser?.role || 'User'}</h3>
-            <p>{currentUser?.email}</p>
+            <p className="user-email text-center">{currentUser?.email}</p>
           </div>
         </div>
         <nav className="sidebar-nav">
           <ul>
-            <li><button className="nav-button">🏠 <span>Home</span></button></li>
-            <li><button className="nav-button">📄 <span>Files</span></button></li>
+            <li><button className="nav-button" onClick={() => navigate('/dashboard')}>🏠 <span>Dashboard</span></button></li>
             <li><button className="nav-button">✉️ <span>Messages</span></button></li>
-            <li><button className="nav-button">🔔 <span>Notifications</span></button></li>
-            <li><button className="nav-button">📍 <span>Location</span></button></li>
-            <li><button className="nav-button">📊 <span>Analytics</span></button></li>
           </ul>
         </nav>
       </div>
@@ -947,9 +991,9 @@ export default function Dashboard() {
       <div className="main-content-wrapper">
         {/* Stats Overview Section */}
         <div className="stats-container">
-          <div className="stat-card streak-card">
+          <div style={{ backgroundColor: 'white' }} className="stat-card streak-card">
             <h3>Current Streak</h3>
-            <p className="stat-value">{userStreak}</p>
+            <p className="">{userStreak}</p>
           </div>
           <div className="stat-card">
             <h3>Total Hours</h3>
