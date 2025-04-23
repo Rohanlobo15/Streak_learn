@@ -11,7 +11,7 @@ import {
   Timestamp,
   onSnapshot
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import './Dashboard.css';
@@ -58,11 +58,13 @@ export default function Dashboard() {
   const [streakData, setStreakData] = useState({ labels: [], data: [] });  
   const [allRolesStreakData, setAllRolesStreakData] = useState([]);
   const [studyTimeData, setStudyTimeData] = useState({ labels: [], data: [] });
-  const [otherUsers, setOtherUsers] = useState([]);
   const [weeklyLeaderboard, setWeeklyLeaderboard] = useState([]);
   const [monthlyLeaderboard, setMonthlyLeaderboard] = useState([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [detailedStudyHistory, setDetailedStudyHistory] = useState([]);
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [fileUploadProgress, setFileUploadProgress] = useState(0);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
   // Format date as YYYY-MM-DD in IST
   const formatDate = (date) => {
@@ -141,7 +143,6 @@ export default function Dashboard() {
     // 3. Listen for roles collection changes (for other users)
     const rolesRef = collection(db, 'roles');
     const rolesUnsubscribe = onSnapshot(rolesRef, (snapshot) => {
-      fetchOtherUsers();
       fetchLeaderboards();
     }, (error) => {
       console.error('Error listening to roles:', error);
@@ -153,9 +154,9 @@ export default function Dashboard() {
       try {
         await fetchStreak();
         await fetchStudyTimeData();
-        await fetchOtherUsers();
         await fetchLeaderboards();
         await fetchAllRolesStreakHistory();
+        await fetchUploadedFiles();
         setLoading(false);
       } catch (error) {
         console.error('Error fetching initial data:', error);
@@ -282,61 +283,6 @@ export default function Dashboard() {
       });
     } catch (error) {
       console.error('Error fetching study time data:', error);
-    }
-  };
-
-  // Fetch other users' data
-  const fetchOtherUsers = async () => {
-    try {
-      const rolesRef = collection(db, 'roles');
-      const rolesSnapshot = await getDocs(rolesRef);
-      
-      const usersData = [];
-      const today = getTodayIST();
-      const userPromises = [];
-      
-      for (const roleDoc of rolesSnapshot.docs) {
-        if (roleDoc.data().taken && roleDoc.data().userId !== currentUser?.uid) {
-          const userId = roleDoc.data().userId;
-          const userPromise = (async () => {
-            try {
-              const userDocRef = doc(db, 'users', userId);
-              const userDoc = await getDoc(userDocRef);
-              
-              if (userDoc.exists()) {
-                const userData = userDoc.data();
-                
-                // Get today's study log if exists
-                const todayLogRef = doc(db, 'studyLogs', userId, 'logs', today);
-                const todayLogDoc = await getDoc(todayLogRef);
-                
-                usersData.push({
-                  id: userId,
-                  role: roleDoc.id,
-                  email: userData.email,
-                  streak: userData.streak || 0,
-                  todayHours: todayLogDoc.exists() ? parseFloat(todayLogDoc.data().hours) || 0 : 0,
-                  todayTopic: todayLogDoc.exists() ? todayLogDoc.data().topic : 'N/A'
-                });
-              }
-            } catch (err) {
-              console.error('Error processing user:', err);
-            }
-          })();
-          
-          userPromises.push(userPromise);
-        }
-      }
-      
-      // Wait for all user data to be processed
-      await Promise.all(userPromises);
-      
-      // Sort by role name for consistent display
-      usersData.sort((a, b) => a.role.localeCompare(b.role));
-      
-      setOtherUsers(usersData);
-    } catch (error) {
-      console.error('Error fetching other users:', error);
     }
   };
 
@@ -544,106 +490,188 @@ export default function Dashboard() {
     }
   };
 
+  // Fetch uploaded files to analyze file sizes
+  const fetchUploadedFiles = async () => {
+    try {
+      if (!currentUser) return;
+
+      // Get all study logs for the current user
+      const logsRef = collection(db, 'studyLogs', currentUser.uid, 'logs');
+      const logsSnapshot = await getDocs(logsRef);
+      
+      const files = [];
+      
+      // Extract file data from each log
+      logsSnapshot.forEach(doc => {
+        const logData = doc.data();
+        if (logData.file) {
+          files.push({
+            ...logData.file,
+            date: doc.id
+          });
+        }
+      });
+      
+      setUploadedFiles(files);
+      console.log('Fetched uploaded files:', files);
+    } catch (error) {
+      console.error('Error fetching uploaded files:', error);
+    }
+  };
+
+  // Handle file upload
+  const handleFileUpload = async (file, studyDate) => {
+    if (!file) return null;
+    
+    try {
+      // Create a unique filename with timestamp and original name
+      const timestamp = new Date().getTime();
+      const fileExtension = file.name.split('.').pop();
+      const fileName = `${timestamp}_${file.name}`;
+      
+      // Create a storage reference
+      const storageRef = ref(storage, `study-files/${currentUser.uid}/${studyDate}/${fileName}`);
+      
+      // Upload the file with progress monitoring
+      const uploadTask = uploadBytesResumable(storageRef, file);
+      
+      // Set up progress monitoring
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setFileUploadProgress(progress);
+        },
+        (error) => {
+          console.error('Error uploading file:', error);
+          throw error;
+        }
+      );
+      
+      // Wait for upload to complete
+      await uploadTask;
+      
+      // Get the download URL
+      const downloadURL = await getDownloadURL(storageRef);
+      
+      // Reset progress
+      setFileUploadProgress(0);
+      
+      return {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        url: downloadURL,
+        path: `study-files/${currentUser.uid}/${studyDate}/${fileName}`
+      };
+    } catch (error) {
+      console.error('Error in file upload:', error);
+      setError('Failed to upload file');
+      setFileUploadProgress(0);
+      return null;
+    }
+  };
+
   // Log study hours
   const handleLogStudy = async (e) => {
     e.preventDefault();
     
+    if (loading) return;
+    
     if (!studyHours || !studyTopic) {
-      setError('Please enter both study hours and topic');
+      setError('Please enter both hours and topic');
       return;
     }
     
-    const newHours = parseFloat(studyHours);
-    if (isNaN(newHours) || newHours <= 0) {
-      setError('Please enter a valid number of hours');
-      return;
-    }
+    setLoading(true);
+    setError('');
     
     try {
-      setLoading(true);
-      setError('');
+      const hours = parseFloat(studyHours);
+      if (isNaN(hours) || hours <= 0 || hours > 24) {
+        throw new Error('Hours must be a positive number up to 24');
+      }
       
       const today = getTodayIST();
-      const userDocRef = doc(db, 'users', currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
+      let fileData = null;
       
-      // Check if user already logged study today
-      const todayLogRef = doc(db, 'studyLogs', currentUser.uid, 'logs', today);
-      const todayLogDoc = await getDoc(todayLogRef);
-      
-      // Calculate total hours for today (add new hours to existing hours)
-      let totalHours = newHours;
-      let existingTopic = '';
-      
-      if (todayLogDoc.exists()) {
-        const existingData = todayLogDoc.data();
-        totalHours += existingData.hours || 0;
-        existingTopic = existingData.topic || '';
+      // Handle file upload if a file was selected
+      if (uploadedFile) {
+        fileData = await handleFileUpload(uploadedFile, today);
       }
       
-      // Check if total hours exceeds 24 hours per day limit
-      if (totalHours > 24) {
-        setError('You cannot log more than 24 hours of study time in a single day');
-        setLoading(false);
-        return;
-      }
+      // Create or update study log
+      const logRef = doc(db, 'studyLogs', currentUser.uid, 'logs', today);
+      const now = Timestamp.now();
       
-      // Update study log with combined hours
-      await setDoc(todayLogRef, {
-        hours: totalHours,
-        // Combine topics if there's an existing topic
-        topic: existingTopic ? `${existingTopic}, ${studyTopic}` : studyTopic,
-        timestamp: Timestamp.now(),
-        lastUpdated: Timestamp.now()
-      });
+      // Check if log already exists for today
+      const existingLog = await getDoc(logRef);
       
-      // Update streak if first log today
-      if (!todayLogDoc.exists()) {
-        const userData = userDoc.data();
-        const lastLogDate = userData.lastLogDate ? new Date(userData.lastLogDate) : null;
-        const todayDate = new Date(today);
-        const yesterdayDate = new Date(todayDate);
-        yesterdayDate.setDate(todayDate.getDate() - 1);
-        const yesterdayString = formatDate(yesterdayDate);
+      if (existingLog.exists()) {
+        // Get existing data
+        const existingData = existingLog.data();
+        const existingHours = parseFloat(existingData.hours) || 0;
+        const existingTopic = existingData.topic || '';
         
-        let newStreak = userData.streak || 0;
+        // Calculate total hours (add new hours to existing)
+        const totalHours = existingHours + hours;
         
-        // If last log was yesterday, increment streak
-        if (lastLogDate && formatDate(lastLogDate) === yesterdayString) {
-          newStreak += 1;
-        } 
-        // If no log yesterday but logged today, reset streak to 1
-        else if (!lastLogDate || formatDate(lastLogDate) !== today) {
-          newStreak = 1;
+        // Check if total exceeds 24 hours
+        if (totalHours > 24) {
+          throw new Error('Total study hours for today cannot exceed 24 hours');
         }
         
-        // Update user document with new streak and last log date
-        await setDoc(userDocRef, {
-          ...userData,
-          streak: newStreak,
-          lastLogDate: today
+        // Update existing log with combined data
+        await setDoc(logRef, {
+          hours: totalHours,
+          // Combine topics if there's an existing topic
+          topic: existingTopic ? `${existingTopic}, ${studyTopic}` : studyTopic,
+          lastUpdated: now,
+          ...(fileData ? { file: fileData } : {})
         }, { merge: true });
-        
-        // Add to streak history
-        const streakHistoryRef = doc(db, 'users', currentUser.uid, 'streakHistory', today);
-        await setDoc(streakHistoryRef, {
-          streak: newStreak,
-          timestamp: Timestamp.now()
+      } else {
+        // Create new log
+        await setDoc(logRef, {
+          hours: hours,
+          topic: studyTopic,
+          timestamp: now,
+          lastUpdated: now,
+          ...(fileData ? { file: fileData } : {})
         });
         
-        setUserStreak(newStreak);
+        // Update streak
+        const userRef = doc(db, 'users', currentUser.uid);
+        const userDoc = await getDoc(userRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const newStreak = (userData.streak || 0) + 1;
+          
+          await setDoc(userRef, {
+            streak: newStreak,
+            lastStudyDate: today
+          }, { merge: true });
+          
+          // Add to streak history
+          const streakHistoryRef = doc(db, 'users', currentUser.uid, 'streakHistory', today);
+          await setDoc(streakHistoryRef, {
+            streak: newStreak,
+            date: today
+          });
+          
+          setUserStreak(newStreak);
+        }
       }
       
       // Reset form
       setStudyHours('');
       setStudyTopic('');
-      setLoading(false);
+      setUploadedFile(null);
+      setFileUploadProgress(0);
       
-      // The real-time listeners will automatically update the UI
-      // No need for manual refreshes
+      setLoading(false);
     } catch (error) {
       console.error('Error logging study:', error);
-      setError('Failed to log study time');
+      setError(error.message || 'Failed to log study time');
       setLoading(false);
     }
   };
@@ -805,19 +833,29 @@ export default function Dashboard() {
     ],
   };
 
-  // Prepare data for streak distribution chart
-  const streakDistributionData = {
-    labels: ['1-7 days', '8-14 days', '15-30 days', '31+ days'],
+  // Prepare data for file size distribution chart
+  const fileSizeDistributionData = {
+    labels: ['<10MB', '10-20MB', '20-50MB', '>50MB'],
     datasets: [
       {
         data: [
-          monthlyLeaderboard.filter(user => user.streak >= 1 && user.streak <= 7).length,
-          monthlyLeaderboard.filter(user => user.streak >= 8 && user.streak <= 14).length,
-          monthlyLeaderboard.filter(user => user.streak >= 15 && user.streak <= 30).length,
-          monthlyLeaderboard.filter(user => user.streak > 30).length,
+          uploadedFiles.filter(file => file.size < 10 * 1024 * 1024).length,
+          uploadedFiles.filter(file => file.size >= 10 * 1024 * 1024 && file.size < 20 * 1024 * 1024).length,
+          uploadedFiles.filter(file => file.size >= 20 * 1024 * 1024 && file.size < 50 * 1024 * 1024).length,
+          uploadedFiles.filter(file => file.size >= 50 * 1024 * 1024).length,
         ],
-        backgroundColor: chartColors.backgroundColors,
-        borderColor: chartColors.borderColors,
+        backgroundColor: [
+          'rgba(94, 114, 228, 0.8)',
+          'rgba(130, 94, 228, 0.8)',
+          'rgba(251, 99, 64, 0.8)',
+          'rgba(45, 206, 137, 0.8)',
+        ],
+        borderColor: [
+          'rgba(94, 114, 228, 1)',
+          'rgba(130, 94, 228, 1)',
+          'rgba(251, 99, 64, 1)',
+          'rgba(45, 206, 137, 1)',
+        ],
         borderWidth: 1,
       },
     ],
@@ -829,10 +867,10 @@ export default function Dashboard() {
     maintainAspectRatio: false,
     layout: {
       padding: {
-        top: 10,
-        right: 25,
-        bottom: 20,
-        left: 25
+        top: 5,
+        right: 5,
+        bottom: 5,
+        left: 10
       }
     },
     plugins: {
@@ -870,7 +908,7 @@ export default function Dashboard() {
             return value === 0 || value === 1 ? value : '';
           },
           count: 2,
-          padding: 10
+          padding: -5
         },
         grid: {
           drawBorder: true,
@@ -880,7 +918,7 @@ export default function Dashboard() {
           display: true,
           text: 'Streak Days',
           padding: {
-            bottom: 10
+            bottom: 5
           }
         }
       },
@@ -888,7 +926,7 @@ export default function Dashboard() {
         ticks: {
           maxRotation: 45,  // Rotate date labels for better readability
           minRotation: 45,
-          padding: 10
+          padding: -5
         },
         grid: {
           drawBorder: true,
@@ -898,7 +936,7 @@ export default function Dashboard() {
           display: true,
           text: 'Date',
           padding: {
-            top: 10
+            top: 0
           }
         }
       }
@@ -929,7 +967,17 @@ export default function Dashboard() {
     plugins: {
       legend: {
         position: 'right',
+        labels: {
+          boxWidth: 15,
+          padding: 15,
+          font: {
+            size: 12
+          }
+        }
       },
+      title: {
+        display: false
+      }
     },
   };
 
@@ -941,11 +989,18 @@ export default function Dashboard() {
           <button className="menu-button" onClick={() => setSidebarOpen(!sidebarOpen)}>
             ☰
           </button>
-          <h1 className="dashboard-title">Street Learn</h1>
+          <h1 className="dashboard-title">Streak Learn</h1>
         </div>
         <div className="user-info">
           <p>Welcome, <span className="user-role">{currentUser?.role}</span></p>
-          <button className="logout-button" onClick={handleLogout} disabled={loading}>Logout</button>
+          <div className="header-buttons">
+            <button className="history-button" onClick={() => setShowHistoryModal(true)}>
+              View History
+            </button>
+            <button className="logout-button" onClick={handleLogout} disabled={loading}>
+              Logout
+            </button>
+          </div>
         </div>
       </div>
       
@@ -978,7 +1033,7 @@ export default function Dashboard() {
         <nav className="sidebar-nav">
           <ul>
             <li><button className="nav-button" onClick={() => navigate('/dashboard')}>🏠 <span>Dashboard</span></button></li>
-            <li><button className="nav-button">✉️ <span>Messages</span></button></li>
+            <li><button className="nav-button" onClick={() => navigate('/messaging')}>✉️ <span>Messages</span></button></li>
           </ul>
         </nav>
       </div>
@@ -1030,6 +1085,26 @@ export default function Dashboard() {
                 required
                 placeholder="Topic"
               />
+            </div>
+            <div className="form-group">
+              <input
+                type="file"
+                onChange={(e) => setUploadedFile(e.target.files[0])}
+                className="file-input"
+                id="file-upload"
+              />
+              <label htmlFor="file-upload" className="file-label">
+                {uploadedFile ? uploadedFile.name : 'Optional: Upload a file'}
+              </label>
+              {fileUploadProgress > 0 && fileUploadProgress < 100 && (
+                <div className="upload-progress-container">
+                  <div 
+                    className="upload-progress-bar" 
+                    style={{ width: `${fileUploadProgress}%` }}
+                  ></div>
+                  <span className="upload-progress-text">{Math.round(fileUploadProgress)}%</span>
+                </div>
+              )}
             </div>
             <button className="submit-button" type="submit" disabled={loading}>
               {loading ? '...' : 'Log'}
@@ -1147,9 +1222,29 @@ export default function Dashboard() {
           
           <div className="dashboard-right-column">
             {/* Analytics Charts */}
-            <div className="chart-card" title="Streak Distribution">
+            <div className="chart-card" title="File Size Distribution">
               <div className="chart-wrapper donut-wrapper">
-                <Doughnut data={streakDistributionData} options={doughnutChartOptions} />
+                <h3 className="chart-title">File Size Distribution</h3>
+                <Doughnut data={fileSizeDistributionData} options={{
+                  ...doughnutChartOptions,
+                  plugins: {
+                    ...doughnutChartOptions.plugins,
+                    legend: {
+                      ...doughnutChartOptions.plugins.legend,
+                      position: 'right',
+                      labels: {
+                        boxWidth: 15,
+                        padding: 15,
+                        font: {
+                          size: 12
+                        }
+                      }
+                    },
+                    title: {
+                      display: false
+                    }
+                  }
+                }} />
               </div>
             </div>
             
@@ -1158,75 +1253,51 @@ export default function Dashboard() {
                 <Bar data={weeklyComparisonData} options={barChartOptions} />
               </div>
             </div>
-            
-            {/* View History Button */}
-            <div className="view-history-container">
-              <button onClick={() => setShowHistoryModal(true)} className="view-history-button">
-                View History
-              </button>
-            </div>
           </div>
         </div>
         
-        {/* Community Section - Full Width */}
-        <div className="community-section" title="Community">
-          {otherUsers.length > 0 ? (
-            <div className="users-grid">
-              {otherUsers.slice(0, 4).map(user => (
-                <div key={user.id} className="user-card">
-                  <h3>{user.role}</h3>
-                  <p>Streak: <span>{user.streak}</span></p>
-                  <p>Hours: <span>{user.todayHours}</span></p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p>No other users have logged study time yet.</p>
-          )}
-        </div>
-      </div>
-
-      {/* Study History Modal */}
-      {showHistoryModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h2>Study History</h2>
-              <button className="close-button" onClick={() => setShowHistoryModal(false)}>&times;</button>
-            </div>
-            <div className="modal-body">
-              {detailedStudyHistory.length > 0 ? (
-                <table className="history-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Time</th>
-                      <th>Hours</th>
-                      <th>Topic</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {detailedStudyHistory.map((log, index) => (
-                      <tr key={index}>
-                        <td>{log.date}</td>
-                        <td>
-                          {log.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          {log.lastUpdated && log.lastUpdated.getTime() !== log.timestamp.getTime() && 
-                            ` (Updated: ${log.lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`}
-                        </td>
-                        <td>{log.hours}</td>
-                        <td>{log.topic}</td>
+        {/* Study History Modal */}
+        {showHistoryModal && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h2>Study History</h2>
+                <button className="close-button" onClick={() => setShowHistoryModal(false)}>&times;</button>
+              </div>
+              <div className="modal-body">
+                {detailedStudyHistory.length > 0 ? (
+                  <table className="history-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Hours</th>
+                        <th>Topic</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p>No study history available yet. Start logging your study time!</p>
-              )}
+                    </thead>
+                    <tbody>
+                      {detailedStudyHistory.map((log, index) => (
+                        <tr key={index}>
+                          <td>{log.date}</td>
+                          <td>
+                            {log.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {log.lastUpdated && log.lastUpdated.getTime() !== log.timestamp.getTime() && 
+                              ` (Updated: ${log.lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`}
+                          </td>
+                          <td>{log.hours}</td>
+                          <td>{log.topic}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p>No study history available yet. Start logging your study time!</p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
