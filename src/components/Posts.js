@@ -338,6 +338,7 @@ export default function Posts() {
 
   // Toggle like on a post
   const handleToggleLike = async (postId, isLiked) => {
+    setLoading(true);
     try {
       if (isLiked) {
         // Unlike: find and delete the like document
@@ -348,17 +349,52 @@ export default function Posts() {
         
         if (userLike) {
           await deleteDoc(doc(db, 'posts', postId, 'likes', userLike.id));
+          
+          // Update local state for immediate UI feedback
+          setPosts(prevPosts => {
+            return prevPosts.map(post => {
+              if (post.id === postId) {
+                const updatedLikes = post.likes.filter(like => like.userId !== currentUser.uid);
+                return {
+                  ...post,
+                  likes: updatedLikes,
+                  likedByCurrentUser: false
+                };
+              }
+              return post;
+            });
+          });
         }
       } else {
         // Like: add a new like document
-        await addDoc(collection(db, 'posts', postId, 'likes'), {
+        const newLikeRef = await addDoc(collection(db, 'posts', postId, 'likes'), {
           userId: currentUser.uid,
           timestamp: serverTimestamp()
+        });
+        
+        // Update local state for immediate UI feedback
+        setPosts(prevPosts => {
+          return prevPosts.map(post => {
+            if (post.id === postId) {
+              const newLike = {
+                id: newLikeRef.id,
+                userId: currentUser.uid
+              };
+              return {
+                ...post,
+                likes: [...post.likes, newLike],
+                likedByCurrentUser: true
+              };
+            }
+            return post;
+          });
         });
       }
     } catch (error) {
       console.error('Error toggling like:', error);
       setError('Failed to update like');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -370,12 +406,37 @@ export default function Posts() {
       return;
     }
     
+    setLoading(true);
     try {
-      await addDoc(collection(db, 'posts', postId, 'comments'), {
+      // Add the comment to Firestore
+      const commentData = {
         text: text.trim(),
         userId: currentUser.uid,
         userRole: userRoles[currentUser.uid]?.role || 'Unknown',
         timestamp: serverTimestamp()
+      };
+      
+      const newCommentRef = await addDoc(collection(db, 'posts', postId, 'comments'), commentData);
+      
+      // Create a temporary timestamp for immediate display
+      const tempTimestamp = new Date();
+      
+      // Update local state for immediate UI feedback
+      setPosts(prevPosts => {
+        return prevPosts.map(post => {
+          if (post.id === postId) {
+            const newComment = {
+              id: newCommentRef.id,
+              ...commentData,
+              timestamp: tempTimestamp // Use current time for immediate display
+            };
+            return {
+              ...post,
+              comments: [...post.comments, newComment]
+            };
+          }
+          return post;
+        });
       });
       
       // Clear comment input
@@ -386,16 +447,34 @@ export default function Posts() {
     } catch (error) {
       console.error('Error adding comment:', error);
       setError('Failed to add comment');
+    } finally {
+      setLoading(false);
     }
   };
 
   // Delete a comment
   const handleDeleteComment = async (postId, commentId) => {
+    setLoading(true);
     try {
       await deleteDoc(doc(db, 'posts', postId, 'comments', commentId));
+      
+      // Update local state for immediate UI feedback
+      setPosts(prevPosts => {
+        return prevPosts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              comments: post.comments.filter(comment => comment.id !== commentId)
+            };
+          }
+          return post;
+        });
+      });
     } catch (error) {
       console.error('Error deleting comment:', error);
       setError('Failed to delete comment');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -713,7 +792,7 @@ export default function Posts() {
                       [post.id]: !prev[post.id]
                     }))}
                   >
-                    💬 {post.comments.length}
+                    💬 {post.comments ? post.comments.length : 0}
                   </button>
                 </div>
                 
@@ -722,7 +801,7 @@ export default function Posts() {
                   <div className="comments-section">
                     <h4>Comments</h4>
                     
-                    {post.comments.length === 0 ? (
+                    {!post.comments || post.comments.length === 0 ? (
                       <p className="no-comments-message">No comments yet. Be the first to comment!</p>
                     ) : (
                       <div className="comments-list">
@@ -756,23 +835,30 @@ export default function Posts() {
                     )}
                     
                     {/* Add Comment Form */}
-                    <div className="add-comment-form">
+                    <div className="comment-form">
                       <textarea
+                        className="comment-input"
                         placeholder="Write a comment..."
                         value={commentText[post.id] || ''}
                         onChange={(e) => setCommentText(prev => ({
                           ...prev,
                           [post.id]: e.target.value
                         }))}
-                        rows={2}
-                      ></textarea>
-                      
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            if (commentText[post.id]?.trim()) {
+                              handleAddComment(post.id);
+                            }
+                          }
+                        }}
+                      />
                       <button 
                         className="submit-comment-button"
                         onClick={() => handleAddComment(post.id)}
-                        disabled={!commentText[post.id] || !commentText[post.id].trim()}
+                        disabled={loading || !commentText[post.id] || !commentText[post.id].trim()}
                       >
-                        Comment
+                        {loading ? 'Posting...' : 'Comment'}
                       </button>
                     </div>
                   </div>
