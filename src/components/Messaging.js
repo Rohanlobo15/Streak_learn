@@ -406,6 +406,11 @@ export default function Messaging() {
           </button>
           <h1 className="messaging-title">Group Chat ({members.length}/7 Members)</h1>
         </div>
+        <div className="header-nav">
+          <button className="nav-link" onClick={() => navigate('/dashboard')}>Dashboard</button>
+          <button className="nav-link" onClick={() => navigate('/files')}>Files</button>
+          <button className="nav-link" onClick={() => navigate('/posts')}>Posts</button>
+        </div>
       </div>
 
       {/* Error message */}

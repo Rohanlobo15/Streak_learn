@@ -18,6 +18,27 @@
   z-index: 10;
 }
 
+.header-nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.nav-link {
+  background: none;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  color: #5e72e4;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.nav-link:hover {
+  background-color: #f0f2f5;
+  color: #324cdd;
+}
+
 .header-left {
   display: flex;
   align-items: center;

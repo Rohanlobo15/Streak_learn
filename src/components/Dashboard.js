@@ -1206,6 +1206,7 @@ export default function Dashboard() {
             <li><button className="nav-button active" onClick={() => navigate('/dashboard')}>🏠 <span>Dashboard</span></button></li>
             <li><button className="nav-button" onClick={() => navigate('/messaging')}>✉️ <span>Messages</span></button></li>
             <li><button className="nav-button" onClick={() => navigate('/files')}>📂 <span>Files</span></button></li>
+            <li><button className="nav-button" onClick={() => navigate('/posts')}>📝 <span>Posts</span></button></li>
           </ul>
         </nav>
       </div>

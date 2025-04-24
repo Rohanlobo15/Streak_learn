@@ -6,6 +6,7 @@ import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import Messaging from './components/Messaging';
 import Files from './components/Files';
+import Posts from './components/Posts';
 import './App.css';
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/messaging" element={<Messaging />} />
             <Route path="/files" element={<Files />} />
+            <Route path="/posts" element={<Posts />} />
             <Route path="/" element={<Navigate to="/dashboard" />} />
           </Routes>
         </div>
