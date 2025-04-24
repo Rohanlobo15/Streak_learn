@@ -195,7 +195,7 @@
   }
 }
 
-.files-title {
+.files-header h2 {
   margin: 0;
   font-size: 1.8rem;
   color: #32325d;
@@ -294,6 +294,13 @@
   height: 300px;
   color: #8898aa;
   text-align: center;
+}
+
+.no-files-message {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 30px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
 }
 
 .no-files-message h2 {
@@ -404,11 +411,17 @@
 }
 
 .file-name {
-  font-weight: 600;
+  font-weight: 500;
   color: #32325d;
-  margin-bottom: 5px;
-  word-break: break-word;
-  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.file-name.no-file {
+  color: #8898aa;
+  font-style: italic;
   overflow: visible;
   white-space: normal;
   font-size: 1rem;

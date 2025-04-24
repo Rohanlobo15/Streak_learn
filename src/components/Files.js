@@ -39,7 +39,7 @@ export default function Files() {
   const [hours, setHours] = useState(1);
   const fileInputRef = useRef(null);
 
-  // Fetch all uploaded files
+  // Fetch all study logs (with or without files)
   const fetchFiles = async () => {
     try {
       setLoading(true);
@@ -49,28 +49,26 @@ export default function Files() {
       const q = query(logsRef, orderBy('timestamp', 'desc'));
       const logsSnapshot = await getDocs(q);
       
-      const filesData = [];
+      const logsData = [];
       
-      // Extract file data from each log
+      // Extract data from each log, regardless of whether it has a file
       logsSnapshot.forEach(doc => {
         const logData = doc.data();
-        if (logData.file) {
-          filesData.push({
-            id: doc.id,
-            date: doc.id,
-            timestamp: logData.timestamp?.toDate() || new Date(),
-            hours: logData.hours,
-            topic: logData.topic,
-            file: logData.file
-          });
-        }
+        logsData.push({
+          id: doc.id,
+          date: doc.id,
+          timestamp: logData.timestamp?.toDate() || new Date(),
+          hours: logData.hours || 0,
+          topic: logData.topic || 'No topic',
+          file: logData.file || null
+        });
       });
       
-      setFiles(filesData);
+      setFiles(logsData);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching files:', error);
-      setError('Failed to load files');
+      console.error('Error fetching logs:', error);
+      setError('Failed to load logs');
       setLoading(false);
     }
   };
@@ -94,15 +92,15 @@ export default function Files() {
     document.body.removeChild(link);
   };
 
-  // Handle file deletion
+  // Handle log deletion (with or without file)
   const handleDeleteFile = async () => {
     if (!selectedFile) return;
     
     try {
       setLoading(true);
       
-      // Delete file from storage
-      if (selectedFile.file.path) {
+      // Delete file from storage if it exists
+      if (selectedFile.file && selectedFile.file.path) {
         const fileRef = ref(storage, selectedFile.file.path);
         await deleteObject(fileRef);
       }
@@ -116,16 +114,21 @@ export default function Files() {
       setSelectedFile(null);
       setLoading(false);
     } catch (error) {
-      console.error('Error deleting file:', error);
-      setError('Failed to delete file');
+      console.error('Error deleting log:', error);
+      setError('Failed to delete log');
       setLoading(false);
     }
   };
   
-  // Open rename modal with the current file name
-  const openRenameModal = (file) => {
-    setSelectedFile(file);
-    setNewFileName(file.file.name);
+  // Open rename modal with the current file name (if file exists)
+  const openRenameModal = (log) => {
+    setSelectedFile(log);
+    // Set initial name based on whether there's a file or not
+    if (log.file) {
+      setNewFileName(log.file.name);
+    } else {
+      setNewFileName('');
+    }
     setShowRenameModal(true);
   };
   
@@ -136,21 +139,27 @@ export default function Files() {
     try {
       setLoading(true);
       
-      // Update the file name in Firestore
-      const fileDocRef = doc(db, 'studyLogs', currentUser.uid, 'logs', selectedFile.id);
+      // Update the file name in Firestore if the file exists
+      const logDocRef = doc(db, 'studyLogs', currentUser.uid, 'logs', selectedFile.id);
       
-      await updateDoc(fileDocRef, {
-        'file.name': newFileName.trim()
-      });
-      
-      // Update state for immediate UI feedback
-      setFiles(prevFiles => 
-        prevFiles.map(file => 
-          file.id === selectedFile.id 
-            ? { ...file, file: { ...file.file, name: newFileName.trim() } } 
-            : file
-        )
-      );
+      if (selectedFile.file) {
+        // Update existing file name
+        await updateDoc(logDocRef, {
+          'file.name': newFileName.trim()
+        });
+        
+        // Update state for immediate UI feedback
+        setFiles(prevFiles => 
+          prevFiles.map(file => 
+            file.id === selectedFile.id 
+              ? { ...file, file: { ...file.file, name: newFileName.trim() } } 
+              : file
+          )
+        );
+      } else {
+        // No file to rename, show error
+        setError('No file to rename');
+      }
       
       // Close modal and reset state
       setShowRenameModal(false);
@@ -269,6 +278,7 @@ export default function Files() {
 
   // Get file icon based on file type
   const getFileIcon = (fileType) => {
+    if (!fileType) return '📋'; // No file icon
     if (fileType.startsWith('image/')) return '🖼️';
     if (fileType.startsWith('video/')) return '🎬';
     if (fileType.startsWith('audio/')) return '🎵';
@@ -282,6 +292,7 @@ export default function Files() {
 
   // Get file size in readable format
   const getFileSize = (bytes) => {
+    if (!bytes) return 'N/A';
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
     if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
@@ -347,7 +358,7 @@ export default function Files() {
           <ul>
             <li><button className="nav-button" onClick={() => navigate('/dashboard')}>🏠 <span>Dashboard</span></button></li>
             <li><button className="nav-button" onClick={() => navigate('/messaging')}>✉️ <span>Messages</span></button></li>
-            <li><button className="nav-button active" onClick={() => navigate('/files')}>📂 <span>Files</span></button></li>
+            <li><button className="nav-button active" onClick={() => navigate('/files')}>📋 <span>My Logs</span></button></li>
             <li><button className="nav-button" onClick={() => navigate('/posts')}>📝 <span>Posts</span></button></li>
           </ul>
         </nav>
@@ -371,7 +382,7 @@ export default function Files() {
               <span></span>
               <span></span>
             </button>
-            <h2>My Files</h2>
+            <h2>My Logs</h2>
           </div>
           <div className="header-right">
             <button className="upload-button" onClick={() => setShowUploadModal(true)}>Upload File</button>
@@ -385,8 +396,8 @@ export default function Files() {
             <div className="loading-message">Loading files...</div>
           ) : files.length === 0 ? (
             <div className="no-files-message">
-              <h2>No files uploaded yet</h2>
-              <p>Files you upload when logging study hours will appear here.</p>
+              <h2>No study logs yet</h2>
+              <p>Your study logs will appear here when you log your study hours.</p>
             </div>
           ) : (
             <div className="files-list">
@@ -401,44 +412,54 @@ export default function Files() {
               </div>
               
               <div className="files-list-body">
-                {files.map((file) => (
-                  <div key={file.id} className="file-item">
+                {files.map((log) => (
+                  <div key={log.id} className="file-item">
                     <div className="file-column file-icon-column">
-                      <span className="file-icon">{getFileIcon(file.file.type)}</span>
+                      <span className="file-icon">{log.file ? getFileIcon(log.file.type) : '📋'}</span>
                     </div>
                     <div className="file-column file-name-column">
-                      <div className="file-name" title={file.file.name}>
-                        {file.file.name}
-                      </div>
-                      <div className="file-timestamp">{formatTime(file.timestamp)}</div>
+                      {log.file ? (
+                        <>
+                          <div className="file-name" title={log.file.name}>
+                            {log.file.name}
+                          </div>
+                          <div className="file-timestamp">{formatTime(log.timestamp)}</div>
+                        </>
+                      ) : (
+                        <div className="file-name no-file">No file attached</div>
+                      )}
                     </div>
-                    <div className="file-column file-date-column">{formatDate(file.date)}</div>
-                    <div className="file-column file-topic-column">{file.topic}</div>
-                    <div className="file-column file-hours-column">{file.hours} hrs</div>
-                    <div className="file-column file-size-column">{getFileSize(file.file.size)}</div>
+                    <div className="file-column file-date-column">{formatDate(log.date)}</div>
+                    <div className="file-column file-topic-column">{log.topic}</div>
+                    <div className="file-column file-hours-column">{log.hours} hrs</div>
+                    <div className="file-column file-size-column">{log.file ? getFileSize(log.file.size) : 'N/A'}</div>
                     <div className="file-column file-actions-column">
                       <div className="file-actions">
-                        <button 
-                          className="file-action-button download-button"
-                          onClick={() => handleDownload(file.file.url, file.file.name)}
-                          title="Download file"
-                        >
-                          ⬇️
-                        </button>
-                        <button 
-                          className="file-action-button rename-button"
-                          onClick={() => openRenameModal(file)}
-                          title="Rename file"
-                        >
-                          ✏️
-                        </button>
+                        {log.file && (
+                          <>
+                            <button 
+                              className="file-action-button download-button"
+                              onClick={() => handleDownload(log.file.url, log.file.name)}
+                              title="Download file"
+                            >
+                              ⬇️
+                            </button>
+                            <button 
+                              className="file-action-button rename-button"
+                              onClick={() => openRenameModal(log)}
+                              title="Rename file"
+                            >
+                              ✏️
+                            </button>
+                          </>
+                        )}
                         <button 
                           className="file-action-button delete-button"
                           onClick={() => {
-                            setSelectedFile(file);
+                            setSelectedFile(log);
                             setShowDeleteConfirm(true);
                           }}
-                          title="Delete file"
+                          title="Delete log"
                         >
                           🗑️
                         </button>
@@ -555,7 +576,7 @@ export default function Files() {
       )}
       
       {/* Rename File Modal */}
-      {showRenameModal && selectedFile && (
+      {showRenameModal && selectedFile && selectedFile.file && (
         <div className="modal-overlay">
           <div className="modal-container">
             <div className="modal-header">
@@ -621,7 +642,7 @@ export default function Files() {
         <div className="modal-overlay">
           <div className="modal-container delete-confirm-modal">
             <div className="modal-header">
-              <h3>Delete File</h3>
+              <h3>Delete Log</h3>
               <button 
                 className="modal-close-button" 
                 onClick={() => {
@@ -633,12 +654,19 @@ export default function Files() {
               </button>
             </div>
             <div className="modal-body">
-              <p>Are you sure you want to delete this file?</p>
+              <p>Are you sure you want to delete this study log?</p>
               <p className="file-to-delete">
-                <span className="file-icon">{getFileIcon(selectedFile.file.type)}</span>
-                <span className="file-name">{selectedFile.file.name}</span>
+                <span className="file-icon">{selectedFile.file ? getFileIcon(selectedFile.file.type) : '📋'}</span>
+                <span className="file-name">
+                  {selectedFile.file ? selectedFile.file.name : 'Study log from ' + formatDate(selectedFile.date)}
+                </span>
               </p>
-              <p className="warning-text">This action cannot be undone.</p>
+              {selectedFile.file && (
+                <p className="warning-text">This will also delete the associated file. This action cannot be undone.</p>
+              )}
+              {!selectedFile.file && (
+                <p className="warning-text">This action cannot be undone.</p>
+              )}
               
               <div className="modal-actions">
                 <button 
