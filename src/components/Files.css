@@ -150,6 +150,8 @@
   padding: 20px;
   display: flex;
   flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }
 
 @media (max-width: 768px) {
@@ -318,6 +320,8 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  position: relative;
+  min-height: 400px; /* Minimum height to prevent layout shifts */
 }
 
 .files-list-header {
@@ -334,9 +338,17 @@
 }
 
 .files-list-body {
+  height: calc(100vh - 250px);
   max-height: calc(100vh - 250px);
   overflow-y: auto;
   width: 100%;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+/* Add spacing between log items for better visual separation */
+.files-list-body > * {
+  margin-bottom: 5px;
 }
 
 .file-item {
@@ -348,6 +360,7 @@
   overflow: visible;
   background-color: #ffffff;
   cursor: pointer;
+  height: 60px; /* Fixed height for consistency */
 }
 
 .file-item:hover {
@@ -362,6 +375,7 @@
   background-color: #eef1f8;
   border-bottom: none;
   border-radius: 8px 8px 0 0;
+  transition: all 0.3s ease;
 }
 
 .file-column {
@@ -374,6 +388,7 @@
 .file-icon-column {
   width: 50px;
   justify-content: center;
+  align-items: center;
 }
 
 .file-name-column {
@@ -411,6 +426,7 @@
   display: flex;
   gap: 5px;
   justify-content: center;
+  align-items: center;
 }
 
 /* Summary section styles */
@@ -422,11 +438,27 @@
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
   border-top: 1px solid #e6e9f0;
   animation: fadeIn 0.3s ease;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  max-height: 300px; /* Fixed maximum height */
+  opacity: 1;
+  transform-origin: top center;
+  transform: scaleY(1);
+  overflow-y: auto; /* Allow scrolling for long content */
+}
+
+.summary-section.closing {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
+  transform: scaleY(0.95);
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(-10px) scaleY(0.95); }
+  to { opacity: 1; transform: translateY(0) scaleY(1); }
 }
 
 .summary-header {
@@ -584,6 +616,11 @@
 
 .file-icon {
   font-size: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
 }
 
 .file-name {
@@ -618,6 +655,11 @@
   padding: 5px;
   border-radius: 4px;
   transition: background-color 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 30px;
+  height: 30px;
 }
 
 .file-action-button.summary-button {
@@ -895,6 +937,20 @@
 
 .delete-confirm-modal .modal-body {
   text-align: center;
+}
+
+.files-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  padding: 20px;
+  position: relative;
+  transition: all 0.3s ease;
+  height: calc(100vh - 100px); /* Fixed height based on viewport */
+  overflow: hidden;
 }
 
 .file-to-delete {

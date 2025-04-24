@@ -298,9 +298,42 @@ export default function Files() {
     }
   };
 
-  // Handle log expansion toggle
+  // Handle log expansion toggle with smooth animation
   const handleToggleExpand = (logId) => {
-    setExpandedLogId(prevId => prevId === logId ? null : logId);
+    // If we're closing the current expanded log
+    if (expandedLogId === logId) {
+      // First set a CSS class to trigger the animation
+      const summarySection = document.querySelector('.summary-section');
+      const fileItem = document.querySelector(`.file-item[data-log-id="${logId}"]`);
+      
+      if (summarySection) {
+        summarySection.classList.add('closing');
+        
+        // After animation completes, actually close it
+        setTimeout(() => {
+          setExpandedLogId(null);
+        }, 280); // Slightly less than the CSS transition time
+      } else {
+        setExpandedLogId(null);
+      }
+    } else {
+      // If there's a currently expanded log, close it first
+      if (expandedLogId) {
+        const currentSummary = document.querySelector('.summary-section');
+        if (currentSummary) {
+          currentSummary.classList.add('closing');
+          
+          // After animation completes, open the new one
+          setTimeout(() => {
+            setExpandedLogId(logId);
+          }, 280);
+          return;
+        }
+      }
+      
+      // Opening a new one - do it immediately if no log is currently expanded
+      setExpandedLogId(logId);
+    }
   };
   
   // Generate summary for a log using AI
@@ -591,6 +624,7 @@ export default function Files() {
                     <div 
                       className={`file-item ${expandedLogId === log.id ? 'expanded' : ''}`}
                       onClick={() => handleToggleExpand(log.id)}
+                      data-log-id={log.id}
                     >
                       <div className="file-column file-icon-column">
                         <span className="file-icon">{log.file ? getFileIcon(log.file.type) : '📋'}</span>
