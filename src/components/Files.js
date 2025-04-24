@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { db, storage } from '../firebase';
+import { generateSummary, extractFileContent, truncateText } from '../utils/geminiApi';
 import { 
   collection, 
   getDocs, 
@@ -28,15 +29,18 @@ export default function Files() {
   const [error, setError] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileSectionOpen, setProfileSectionOpen] = useState(false);
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [showRenameModal, setShowRenameModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showRenameModal, setShowRenameModal] = useState(false);
   const [newFileName, setNewFileName] = useState('');
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [topic, setTopic] = useState('');
   const [hours, setHours] = useState(1);
+  const [expandedLogId, setExpandedLogId] = useState(null);
+  const [summaries, setSummaries] = useState({});
+  const [generatingSummary, setGeneratingSummary] = useState(false);
   const fileInputRef = useRef(null);
 
   // Fetch all study logs (with or without files)
@@ -60,11 +64,22 @@ export default function Files() {
           timestamp: logData.timestamp?.toDate() || new Date(),
           hours: logData.hours || 0,
           topic: logData.topic || 'No topic',
-          file: logData.file || null
+          file: logData.file || null,
+          summary: logData.summary || null
         });
       });
       
       setFiles(logsData);
+      
+      // Load existing summaries into state
+      const summariesObj = {};
+      logsData.forEach(log => {
+        if (log.summary) {
+          summariesObj[log.id] = log.summary;
+        }
+      });
+      setSummaries(summariesObj);
+      
       setLoading(false);
     } catch (error) {
       console.error('Error fetching logs:', error);
@@ -216,7 +231,30 @@ export default function Files() {
           const uniqueLogId = `log_${timestamp}`;
           const logDocRef = doc(db, 'studyLogs', currentUser.uid, 'logs', uniqueLogId);
           
-          // Create a new log document with the uploaded file
+          // Try to extract content from text-based files
+          let fileContent = null;
+          let summary = null;
+          
+          try {
+            // Extract text content from the file if possible
+            fileContent = await extractFileContent(uploadedFile);
+            
+            if (fileContent) {
+              // Truncate content to avoid API limits
+              const truncatedContent = truncateText(fileContent);
+              
+              // Generate summary using Gemini API
+              summary = await generateSummary(topic.trim(), Number(hours), truncatedContent);
+            } else {
+              // Generate summary without file content
+              summary = await generateSummary(topic.trim(), Number(hours));
+            }
+          } catch (error) {
+            console.error('Error generating summary:', error);
+            // Continue without summary if there's an error
+          }
+          
+          // Create a new log document with the uploaded file and summary
           await setDoc(logDocRef, {
             timestamp: new Date(),
             topic: topic.trim(),
@@ -227,8 +265,17 @@ export default function Files() {
               size: uploadedFile.size,
               url: downloadURL,
               path: filePath
-            }
+            },
+            summary: summary
           });
+          
+          // Add summary to state
+          if (summary) {
+            setSummaries(prev => ({
+              ...prev,
+              [uniqueLogId]: summary
+            }));
+          }
           
           // Reset form
           setUploadedFile(null);
@@ -248,6 +295,56 @@ export default function Files() {
     }
   };
 
+  // Handle log expansion toggle
+  const handleToggleExpand = (logId) => {
+    setExpandedLogId(prevId => prevId === logId ? null : logId);
+  };
+  
+  // Generate summary for a log
+  const handleGenerateSummary = async (log) => {
+    try {
+      setGeneratingSummary(true);
+      
+      let fileContent = null;
+      
+      // If there's a file, try to download and extract its content
+      if (log.file && log.file.url) {
+        try {
+          const response = await fetch(log.file.url);
+          const blob = await response.blob();
+          const file = new File([blob], log.file.name, { type: log.file.type });
+          fileContent = await extractFileContent(file);
+        } catch (error) {
+          console.error('Error extracting file content:', error);
+          // Continue without file content if there's an error
+        }
+      }
+      
+      // Generate summary using Gemini API
+      const summary = await generateSummary(
+        log.topic, 
+        log.hours, 
+        fileContent ? truncateText(fileContent) : null
+      );
+      
+      // Update state with the new summary
+      setSummaries(prev => ({
+        ...prev,
+        [log.id]: summary
+      }));
+      
+      // Save summary to Firestore
+      const logDocRef = doc(db, 'studyLogs', currentUser.uid, 'logs', log.id);
+      await updateDoc(logDocRef, { summary });
+      
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      setError('Failed to generate summary');
+    } finally {
+      setGeneratingSummary(false);
+    }
+  };
+  
   // Handle logout
   const handleLogout = async () => {
     try {
@@ -413,59 +510,97 @@ export default function Files() {
               
               <div className="files-list-body">
                 {files.map((log) => (
-                  <div key={log.id} className="file-item">
-                    <div className="file-column file-icon-column">
-                      <span className="file-icon">{log.file ? getFileIcon(log.file.type) : '📋'}</span>
-                    </div>
-                    <div className="file-column file-name-column">
-                      {log.file ? (
-                        <>
-                          <div className="file-name" title={log.file.name}>
-                            {log.file.name}
-                          </div>
-                          <div className="file-timestamp">{formatTime(log.timestamp)}</div>
-                        </>
-                      ) : (
-                        <div className="file-name no-file">No file attached</div>
-                      )}
-                    </div>
-                    <div className="file-column file-date-column">{formatDate(log.date)}</div>
-                    <div className="file-column file-topic-column">{log.topic}</div>
-                    <div className="file-column file-hours-column">{log.hours} hrs</div>
-                    <div className="file-column file-size-column">{log.file ? getFileSize(log.file.size) : 'N/A'}</div>
-                    <div className="file-column file-actions-column">
-                      <div className="file-actions">
-                        {log.file && (
+                  <React.Fragment key={log.id}>
+                    <div 
+                      className={`file-item ${expandedLogId === log.id ? 'expanded' : ''}`}
+                      onClick={() => handleToggleExpand(log.id)}
+                    >
+                      <div className="file-column file-icon-column">
+                        <span className="file-icon">{log.file ? getFileIcon(log.file.type) : '📋'}</span>
+                      </div>
+                      <div className="file-column file-name-column">
+                        {log.file ? (
                           <>
-                            <button 
-                              className="file-action-button download-button"
-                              onClick={() => handleDownload(log.file.url, log.file.name)}
-                              title="Download file"
-                            >
-                              ⬇️
-                            </button>
-                            <button 
-                              className="file-action-button rename-button"
-                              onClick={() => openRenameModal(log)}
-                              title="Rename file"
-                            >
-                              ✏️
-                            </button>
+                            <div className="file-name" title={log.file.name}>
+                              {log.file.name}
+                            </div>
+                            <div className="file-timestamp">{formatTime(log.timestamp)}</div>
                           </>
+                        ) : (
+                          <div className="file-name no-file">No file attached</div>
                         )}
-                        <button 
-                          className="file-action-button delete-button"
-                          onClick={() => {
-                            setSelectedFile(log);
-                            setShowDeleteConfirm(true);
-                          }}
-                          title="Delete log"
-                        >
-                          🗑️
-                        </button>
+                      </div>
+                      <div className="file-column file-date-column">{formatDate(log.date)}</div>
+                      <div className="file-column file-topic-column">{log.topic}</div>
+                      <div className="file-column file-hours-column">{log.hours} hrs</div>
+                      <div className="file-column file-size-column">{log.file ? getFileSize(log.file.size) : 'N/A'}</div>
+                      <div className="file-column file-actions-column">
+                        <div className="file-actions" onClick={(e) => e.stopPropagation()}>
+                          {log.file && (
+                            <>
+                              <button 
+                                className="file-action-button download-button"
+                                onClick={() => handleDownload(log.file.url, log.file.name)}
+                                title="Download file"
+                              >
+                                ⬇️
+                              </button>
+                              <button 
+                                className="file-action-button rename-button"
+                                onClick={() => openRenameModal(log)}
+                                title="Rename file"
+                              >
+                                ✏️
+                              </button>
+                            </>
+                          )}
+                          <button 
+                            className="file-action-button delete-button"
+                            onClick={() => {
+                              setSelectedFile(log);
+                              setShowDeleteConfirm(true);
+                            }}
+                            title="Delete log"
+                          >
+                            🗑️
+                          </button>
+                          <button 
+                            className="file-action-button summary-button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleExpand(log.id);
+                            }}
+                            title="View/Generate Summary"
+                          >
+                            {expandedLogId === log.id ? '🔼' : '🔽'}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                    
+                    {/* Expanded summary section */}
+                    {expandedLogId === log.id && (
+                      <div className="summary-section">
+                        <h3>Summary</h3>
+                        {generatingSummary && log.id === expandedLogId ? (
+                          <div className="generating-summary">Generating summary...</div>
+                        ) : summaries[log.id] ? (
+                          <div className="summary-content">{summaries[log.id]}</div>
+                        ) : (
+                          <div className="summary-actions">
+                            <p>No summary available yet.</p>
+                            <button 
+                              className="generate-summary-button"
+                              onClick={() => handleGenerateSummary(log)}
+                              disabled={generatingSummary}
+                            >
+                              Generate Summary
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </React.Fragment>
                 ))}
               </div>
             </div>
