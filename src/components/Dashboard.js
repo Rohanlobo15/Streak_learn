@@ -93,6 +93,97 @@ export default function Dashboard() {
   };
 
   // Load user data and stats on component mount
+  // Function to update all users' streak data and study time for April 23rd and 24th, 2025
+  const updateAllUsersStreakData = async () => {
+    try {
+      // Get all roles to find all users
+      const rolesRef = collection(db, 'roles');
+      const rolesSnapshot = await getDocs(rolesRef);
+      
+      // Dates to add streaks for
+      const streakDates = ['2025-04-23', '2025-04-24'];
+      
+      // Process each role/user
+      for (const roleDoc of rolesSnapshot.docs) {
+        if (roleDoc.data().taken) {
+          const userId = roleDoc.data().userId;
+          const roleName = roleDoc.id;
+          
+          console.log(`Updating data for ${roleName} (${userId})`);
+          
+          // Get current user streak
+          const userDocRef = doc(db, 'users', userId);
+          const userDoc = await getDoc(userDocRef);
+          
+          if (userDoc.exists()) {
+            // Current streak value
+            let currentStreak = userDoc.data().streak || 0;
+            
+            // Update streak for each date
+            for (const date of streakDates) {
+              // Check if streak history already exists for this date
+              const streakHistoryRef = doc(db, 'users', userId, 'streakHistory', date);
+              const streakHistoryDoc = await getDoc(streakHistoryRef);
+              
+              if (!streakHistoryDoc.exists()) {
+                // Increment streak
+                currentStreak += 1;
+                
+                // Add to streak history
+                await setDoc(streakHistoryRef, {
+                  streak: currentStreak,
+                  date: date
+                });
+                
+                console.log(`Added streak for ${roleName} on ${date}`);
+              } else {
+                console.log(`Streak already exists for ${roleName} on ${date}`);
+              }
+              
+              // Add 2 hours of study time for April 23rd
+              if (date === '2025-04-23') {
+                const studyLogRef = doc(db, 'studyLogs', userId, 'logs', date);
+                const studyLogDoc = await getDoc(studyLogRef);
+                
+                if (!studyLogDoc.exists()) {
+                  // Add study log with 2 hours
+                  await setDoc(studyLogRef, {
+                    hours: 2,
+                    topic: 'Study Session',
+                    timestamp: Timestamp.now(),
+                    lastUpdated: Timestamp.now()
+                  });
+                  
+                  console.log(`Added 2 hours study time for ${roleName} on ${date}`);
+                } else {
+                  console.log(`Study log already exists for ${roleName} on ${date}`);
+                }
+              }
+            }
+            
+            // Update user's current streak
+            await setDoc(userDocRef, {
+              streak: currentStreak,
+              lastStudyDate: streakDates[streakDates.length - 1]
+            }, { merge: true });
+            
+            console.log(`Updated streak for ${roleName} to ${currentStreak}`);
+          }
+        }
+      }
+      
+      console.log('Data update completed for all users');
+      // Refresh data after update
+      await fetchAllRolesStreakHistory();
+      await fetchLeaderboards();
+      await fetchStudyTimeData();
+      
+    } catch (error) {
+      console.error('Error updating user data:', error);
+      setError('Failed to update user data');
+    }
+  };
+
   useEffect(() => {
     if (!currentUser) {
       navigate('/login');
@@ -165,6 +256,10 @@ export default function Dashboard() {
         await fetchLeaderboards();
         await fetchAllRolesStreakHistory();
         await fetchUploadedFiles();
+        
+        // Run the one-time streak update for all users
+        await updateAllUsersStreakData();
+        
         setLoading(false);
       } catch (error) {
         console.error('Error fetching initial data:', error);
@@ -197,20 +292,24 @@ export default function Dashboard() {
         const streakHistoryRef = collection(db, 'users', currentUser.uid, 'streakHistory');
         const streakHistorySnapshot = await getDocs(streakHistoryRef);
         
-        const history = [];
+        // Create a set of dates when the user logged study time
+        const streakDaysSet = new Set();
         streakHistorySnapshot.forEach(doc => {
-          history.push({
-            date: doc.id,
-            streak: doc.data().streak
-          });
+          streakDaysSet.add(doc.id); // Only store the date
         });
         
-        // Sort by date
-        history.sort((a, b) => new Date(a.date) - new Date(b.date));
+        // Get all dates from the streak history
+        const allDates = [];
+        streakHistorySnapshot.forEach(doc => {
+          allDates.push(doc.id);
+        });
         
-        // Prepare data for chart
-        const labels = history.map(item => item.date);
-        const data = history.map(item => item.streak);
+        // Sort dates chronologically
+        allDates.sort((a, b) => new Date(a) - new Date(b));
+        
+        // Prepare data for chart - using binary values (1 for days with streak, 0 for days without)
+        const labels = allDates;
+        const data = allDates.map(() => 1); // Each date in allDates represents a day with streak
         
         setStreakData({ labels, data });
       }
@@ -335,10 +434,24 @@ export default function Dashboard() {
       // Convert labels set to array and sort
       const sortedLabels = Array.from(allLabels).sort((a, b) => new Date(a) - new Date(b));
 
+      // Format dates for display (MM-DD format)
+      const formattedLabels = sortedLabels.map(date => formatDateToMonthDay(date));
+
+      // Create a mapping between formatted labels and original dates for reference
+      const dateMapping = {};
+      sortedLabels.forEach((date, index) => {
+        dateMapping[formattedLabels[index]] = date;
+      });
+
       // Build binary streak data for each role
       const datasets = allRolesData.map((role, idx) => ({
         label: role.label,
-        data: sortedLabels.map(date => role.streakDays.has(date) ? 1 : 0),
+        data: formattedLabels.map(formattedDate => {
+          // Get the original date from our mapping
+          const originalDate = dateMapping[formattedDate];
+          // Check if this date is in the user's streak days
+          return role.streakDays.has(originalDate) ? 1 : 0;
+        }),
         fill: false,
         borderColor: chartColors.backgroundColors[idx % chartColors.backgroundColors.length],
         backgroundColor: chartColors.backgroundColors[idx % chartColors.backgroundColors.length],
@@ -349,7 +462,7 @@ export default function Dashboard() {
       }));
 
       setStreakChartData({
-        labels: sortedLabels,
+        labels: formattedLabels,
         datasets: datasets
       });
       setAllRolesStreakData(allRolesData); // preserve for other uses
@@ -781,44 +894,13 @@ export default function Dashboard() {
     }
   };
 
-  // Prepare data for streak history chart (right side, 0/1)
-  const streakChartLabels = streakData.labels.slice(-30).map(formatDateToMonthDay);
+  // Use streakChartData directly from fetchAllRolesStreakHistory
   const streakChartConfig = {
-    labels: streakChartLabels, // Last 30 days
-    datasets: [
-      {
-        label: currentUser?.role || 'Your Streak',
-        data: streakData.data.slice(-30),
-        borderColor: chartColors.primary,
-        backgroundColor: 'rgba(74, 107, 255, 0.1)',
-        fill: false,
-        tension: 0.4,
-        pointBackgroundColor: chartColors.primary,
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-        pointRadius: 4,
-      },
-      ...allRolesStreakData
-        .filter(role => role.userId !== currentUser?.uid)
-        .map((roleData, index) => {
-          const colorIndex = (index % (chartColors.borderColors.length - 1)) + 1;
-          return {
-            label: roleData.label,
-            data: streakChartLabels.map(date => {
-              const entry = roleData.streakDays.has(date);
-              return entry ? 1 : 0;
-            }),
-            borderColor: chartColors.borderColors[colorIndex],
-            backgroundColor: 'transparent',
-            fill: false,
-            tension: 0.4,
-            pointBackgroundColor: chartColors.borderColors[colorIndex],
-            pointBorderColor: '#fff',
-            pointBorderWidth: 2,
-            pointRadius: 3,
-          };
-        })
-    ],
+    labels: streakChartData.labels ? streakChartData.labels.slice(-30) : [], // Last 30 days
+    datasets: streakChartData.datasets ? streakChartData.datasets.map(dataset => ({
+      ...dataset,
+      data: dataset.data.slice(-30)
+    })) : []
   };
 
   const studyTimeChartData = {
@@ -1233,7 +1315,7 @@ export default function Dashboard() {
               </div>
               <div className="chart-card" title="Streak History" onClick={() => setExpandedChart('streak')} style={{ cursor: 'pointer' }}>
                 <div className="chart-wrapper" style={{ height: '300px', marginBottom: '20px' }}>
-                  <Line data={streakChartConfig} options={{
+                  <Line data={streakChartData} options={{
                     ...lineChartOptions,
                     scales: {
                       ...lineChartOptions.scales,
@@ -1294,10 +1376,10 @@ export default function Dashboard() {
                     );
                   })()}
                   {expandedChart === 'streak' && (() => {
-                    const yDomain = getYDomain(streakChartConfig);
+                    const yDomain = getYDomain(streakChartData);
                     return (
                       <Line
-                        data={streakChartConfig}
+                        data={streakChartData}
                         options={{
                           ...lineChartOptions,
                           scales: {
