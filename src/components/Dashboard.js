@@ -886,68 +886,81 @@ export default function Dashboard() {
   // Format date to show only month and date (MM-DD)
   const formatDateToMonthDay = (dateString) => {
     try {
+      // Check if dateString is valid
+      if (!dateString || dateString === 'undefined' || dateString === 'null') {
+        return 'Invalid date';
+      }
+      
+      // Handle ISO date strings (YYYY-MM-DD)
+      if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const parts = dateString.split('-');
+        return `${parts[1]}-${parts[2]}`; // Return MM-DD directly
+      }
+      
+      // Otherwise, try to create a date object
       const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date:', dateString);
+        return 'Invalid date';
+      }
+      
       return `${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
     } catch (error) {
       console.error('Error formatting date to month-day:', error, dateString);
-      return dateString;
+      return 'Error';
     }
   };
 
   // Use streakChartData directly from fetchAllRolesStreakHistory
   const streakChartConfig = {
-    labels: streakChartData.labels ? streakChartData.labels.slice(-30) : [], // Last 30 days
+    labels: streakChartData.labels ? streakChartData.labels.slice(-30).map(formatDateToMonthDay) : [], // Last 30 days
     datasets: streakChartData.datasets ? streakChartData.datasets.map(dataset => ({
       ...dataset,
-      data: dataset.data.slice(-30)
+      data: dataset.data.slice(-30).map(value => value === null || value === undefined ? 0 : value) // Replace null/undefined with 0
     })) : []
   };
 
   const studyTimeChartData = {
-    labels: studyTimeData.labels.slice(-30).map(formatDateToMonthDay), // Last 30 days
+    labels: studyTimeData.labels ? studyTimeData.labels.slice(-14).map(formatDateToMonthDay) : [], // Last 14 days
     datasets: [
       // First include the current user's study hours
       {
-        label: currentUser?.role || 'Your Hours',
-        data: studyTimeData.data.slice(-30),
+        label: 'You',
+        data: studyTimeData.data ? studyTimeData.data.slice(-14).map(value => value === null ? 0 : value) : [], // Replace null with 0
         borderColor: chartColors.borderColors[0],
         backgroundColor: 'transparent',
         borderWidth: 2,
-        tension: 0.4,
-        fill: false,
         pointBackgroundColor: chartColors.borderColors[0],
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
         pointRadius: 4,
-        spanGaps: true, // This ensures gaps in data are properly shown
+        pointHoverRadius: 6,
+        tension: 0.3
       },
-      // Then add all other users' study hours
-      ...(studyTimeData.allUsersData || [])  
-        .filter(userData => userData.userId !== currentUser?.uid) // Filter out current user
+      // Then include other users' study hours
+      ...(studyTimeData.allUsersData ? studyTimeData.allUsersData
+        .filter(userData => userData.userId !== currentUser.uid) // Exclude current user
         .map((userData, index) => {
-          // Get the color for this user (cycling through available colors)
-          const colorIndex = (index % (chartColors.borderColors.length - 1)) + 1; // Skip first color
+          // Get a different color for each user
+          const colorIndex = (index + 1) % chartColors.borderColors.length;
           
           return {
             label: userData.roleId,
-            data: studyTimeData.labels.slice(-30).map(date => {
-              // Find the hours value for this date, or return null if not found
+            data: studyTimeData.labels.slice(-14).map(date => {
+              // Find the hours value for this date, or return 0 if not found (instead of null)
               const entry = userData.logs.find(log => log.date === date);
-              return entry ? entry.hours : null;
+              return entry ? entry.hours : 0; // Return 0 instead of null
             }),
             borderColor: chartColors.borderColors[colorIndex],
             backgroundColor: 'transparent',
             borderWidth: 2,
-            tension: 0.4,
-            fill: false,
             pointBackgroundColor: chartColors.borderColors[colorIndex],
-            pointBorderColor: '#fff',
-            pointBorderWidth: 2,
             pointRadius: 4,
-            spanGaps: true, // This ensures gaps in data are properly shown
+            pointHoverRadius: 6,
+            tension: 0.3
           };
-        })
-    ],
+        }) : [])
+    ]
   };
 
   // Prepare data for weekly comparison chart
@@ -970,10 +983,10 @@ export default function Dashboard() {
     datasets: [
       {
         data: [
-          uploadedFiles.filter(file => file.size < 10 * 1024 * 1024).length,
-          uploadedFiles.filter(file => file.size >= 10 * 1024 * 1024 && file.size < 20 * 1024 * 1024).length,
-          uploadedFiles.filter(file => file.size >= 20 * 1024 * 1024 && file.size < 50 * 1024 * 1024).length,
-          uploadedFiles.filter(file => file.size >= 50 * 1024 * 1024).length,
+          uploadedFiles.filter(file => file && file.size < 10 * 1024 * 1024).length,
+          uploadedFiles.filter(file => file && file.size >= 10 * 1024 * 1024 && file.size < 20 * 1024 * 1024).length,
+          uploadedFiles.filter(file => file && file.size >= 20 * 1024 * 1024 && file.size < 50 * 1024 * 1024).length,
+          uploadedFiles.filter(file => file && file.size >= 50 * 1024 * 1024).length,
         ],
         backgroundColor: [
           'rgba(94, 114, 228, 0.8)',
@@ -1049,7 +1062,7 @@ export default function Dashboard() {
             return tooltipItems[0].label;
           },
           label: function(context) {
-            return `${context.dataset.label}: ${context.raw || 'No data'}`;
+            return `${context.dataset.label}: ${context.raw !== null && context.raw !== undefined ? context.raw : '0'}`;
           }
         }
       }

@@ -1,13 +1,23 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { db } from '../firebase';
+import { db, storage } from '../firebase';
 import { 
   collection, 
   getDocs, 
   query, 
-  orderBy
+  orderBy,
+  doc,
+  updateDoc,
+  deleteDoc,
+  setDoc
 } from 'firebase/firestore';
+import { 
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+  deleteObject
+} from 'firebase/storage';
 import './Files.css';
 
 export default function Files() {
@@ -18,48 +28,58 @@ export default function Files() {
   const [error, setError] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileSectionOpen, setProfileSectionOpen] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [newFileName, setNewFileName] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [topic, setTopic] = useState('');
+  const [hours, setHours] = useState(1);
+  const fileInputRef = useRef(null);
 
   // Fetch all uploaded files
+  const fetchFiles = async () => {
+    try {
+      setLoading(true);
+      
+      // Get all study logs for the current user
+      const logsRef = collection(db, 'studyLogs', currentUser.uid, 'logs');
+      const q = query(logsRef, orderBy('timestamp', 'desc'));
+      const logsSnapshot = await getDocs(q);
+      
+      const filesData = [];
+      
+      // Extract file data from each log
+      logsSnapshot.forEach(doc => {
+        const logData = doc.data();
+        if (logData.file) {
+          filesData.push({
+            id: doc.id,
+            date: doc.id,
+            timestamp: logData.timestamp?.toDate() || new Date(),
+            hours: logData.hours,
+            topic: logData.topic,
+            file: logData.file
+          });
+        }
+      });
+      
+      setFiles(filesData);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching files:', error);
+      setError('Failed to load files');
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!currentUser) {
       navigate('/login');
       return;
     }
-
-    const fetchFiles = async () => {
-      try {
-        setLoading(true);
-        
-        // Get all study logs for the current user
-        const logsRef = collection(db, 'studyLogs', currentUser.uid, 'logs');
-        const q = query(logsRef, orderBy('timestamp', 'desc'));
-        const logsSnapshot = await getDocs(q);
-        
-        const filesData = [];
-        
-        // Extract file data from each log
-        logsSnapshot.forEach(doc => {
-          const logData = doc.data();
-          if (logData.file) {
-            filesData.push({
-              id: doc.id,
-              date: doc.id,
-              timestamp: logData.timestamp?.toDate() || new Date(),
-              hours: logData.hours,
-              topic: logData.topic,
-              file: logData.file
-            });
-          }
-        });
-        
-        setFiles(filesData);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching files:', error);
-        setError('Failed to load files');
-        setLoading(false);
-      }
-    };
 
     fetchFiles();
   }, [currentUser, navigate]);
@@ -72,6 +92,151 @@ export default function Files() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Handle file deletion
+  const handleDeleteFile = async () => {
+    if (!selectedFile) return;
+    
+    try {
+      setLoading(true);
+      
+      // Delete file from storage
+      if (selectedFile.file.path) {
+        const fileRef = ref(storage, selectedFile.file.path);
+        await deleteObject(fileRef);
+      }
+      
+      // Delete log document
+      await deleteDoc(doc(db, 'studyLogs', currentUser.uid, 'logs', selectedFile.id));
+      
+      // Update state
+      setFiles(prevFiles => prevFiles.filter(file => file.id !== selectedFile.id));
+      setShowDeleteConfirm(false);
+      setSelectedFile(null);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      setError('Failed to delete file');
+      setLoading(false);
+    }
+  };
+  
+  // Open rename modal with the current file name
+  const openRenameModal = (file) => {
+    setSelectedFile(file);
+    setNewFileName(file.file.name);
+    setShowRenameModal(true);
+  };
+  
+  // Handle file rename
+  const handleRenameFile = async () => {
+    if (!selectedFile || !newFileName.trim()) return;
+    
+    try {
+      setLoading(true);
+      
+      // Update the file name in Firestore
+      const fileDocRef = doc(db, 'studyLogs', currentUser.uid, 'logs', selectedFile.id);
+      
+      await updateDoc(fileDocRef, {
+        'file.name': newFileName.trim()
+      });
+      
+      // Update state for immediate UI feedback
+      setFiles(prevFiles => 
+        prevFiles.map(file => 
+          file.id === selectedFile.id 
+            ? { ...file, file: { ...file.file, name: newFileName.trim() } } 
+            : file
+        )
+      );
+      
+      // Close modal and reset state
+      setShowRenameModal(false);
+      setSelectedFile(null);
+      setNewFileName('');
+      setLoading(false);
+    } catch (error) {
+      console.error('Error renaming file:', error);
+      setError('Failed to rename file');
+      setLoading(false);
+    }
+  };
+  
+  // Handle file upload
+  const handleFileSelect = (e) => {
+    if (e.target.files.length > 0) {
+      setUploadedFile(e.target.files[0]);
+    }
+  };
+  
+  const handleUploadFile = async (e) => {
+    e.preventDefault();
+    
+    if (!uploadedFile || !topic.trim() || hours <= 0) return;
+    
+    try {
+      setLoading(true);
+      
+      // Create a unique filename with timestamp to prevent overwriting
+      const timestamp = new Date().getTime();
+      const originalFileName = uploadedFile.name;
+      const filePath = `files/${currentUser.uid}/${timestamp}_${originalFileName}`;
+      
+      // Upload file to Firebase Storage
+      const storageRef = ref(storage, filePath);
+      const uploadTask = uploadBytesResumable(storageRef, uploadedFile);
+      
+      // Monitor upload progress
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+        },
+        (error) => {
+          console.error('Error uploading file:', error);
+          setError('Failed to upload file');
+          setLoading(false);
+        },
+        async () => {
+          // Get download URL
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          
+          // Create a unique log ID using timestamp to prevent overwriting
+          const uniqueLogId = `log_${timestamp}`;
+          const logDocRef = doc(db, 'studyLogs', currentUser.uid, 'logs', uniqueLogId);
+          
+          // Create a new log document with the uploaded file
+          await setDoc(logDocRef, {
+            timestamp: new Date(),
+            topic: topic.trim(),
+            hours: Number(hours),
+            file: {
+              name: originalFileName,
+              type: uploadedFile.type,
+              size: uploadedFile.size,
+              url: downloadURL,
+              path: filePath
+            }
+          });
+          
+          // Reset form
+          setUploadedFile(null);
+          setTopic('');
+          setHours(1);
+          setUploadProgress(0);
+          setShowUploadModal(false);
+          
+          // Refresh files list
+          fetchFiles();
+        }
+      );
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      setError('Failed to upload file');
+      setLoading(false);
+    }
   };
 
   // Handle logout
@@ -209,6 +374,7 @@ export default function Files() {
             <h2>My Files</h2>
           </div>
           <div className="header-right">
+            <button className="upload-button" onClick={() => setShowUploadModal(true)}>Upload File</button>
             <button className="logout-button" onClick={handleLogout}>Logout</button>
           </div>
         </header>
@@ -251,13 +417,32 @@ export default function Files() {
                     <div className="file-column file-hours-column">{file.hours} hrs</div>
                     <div className="file-column file-size-column">{getFileSize(file.file.size)}</div>
                     <div className="file-column file-actions-column">
-                      <button 
-                        className="download-button"
-                        onClick={() => handleDownload(file.file.url, file.file.name)}
-                        title="Download file"
-                      >
-                        ⬇️
-                      </button>
+                      <div className="file-actions">
+                        <button 
+                          className="file-action-button download-button"
+                          onClick={() => handleDownload(file.file.url, file.file.name)}
+                          title="Download file"
+                        >
+                          ⬇️
+                        </button>
+                        <button 
+                          className="file-action-button rename-button"
+                          onClick={() => openRenameModal(file)}
+                          title="Rename file"
+                        >
+                          ✏️
+                        </button>
+                        <button 
+                          className="file-action-button delete-button"
+                          onClick={() => {
+                            setSelectedFile(file);
+                            setShowDeleteConfirm(true);
+                          }}
+                          title="Delete file"
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -266,6 +451,217 @@ export default function Files() {
           )}
         </div>
       </div>
+      
+      {/* Upload File Modal */}
+      {showUploadModal && (
+        <div className="modal-overlay">
+          <div className="modal-container">
+            <div className="modal-header">
+              <h3>Upload New File</h3>
+              <button 
+                className="modal-close-button" 
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setUploadedFile(null);
+                  setTopic('');
+                  setHours(1);
+                  setUploadProgress(0);
+                }}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleUploadFile}>
+                <div className="form-group">
+                  <label htmlFor="file-upload">Select File</label>
+                  <input 
+                    type="file" 
+                    id="file-upload" 
+                    onChange={handleFileSelect} 
+                    ref={fileInputRef}
+                    required 
+                  />
+                  {uploadedFile && (
+                    <div className="selected-file">
+                      <span className="file-icon">{getFileIcon(uploadedFile.type)}</span>
+                      <span className="file-name">{uploadedFile.name}</span>
+                      <span className="file-size">({getFileSize(uploadedFile.size)})</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="topic">Study Topic</label>
+                  <input 
+                    type="text" 
+                    id="topic" 
+                    value={topic} 
+                    onChange={(e) => setTopic(e.target.value)} 
+                    placeholder="What did you study?" 
+                    required 
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="hours">Hours Studied</label>
+                  <input 
+                    type="number" 
+                    id="hours" 
+                    value={hours} 
+                    onChange={(e) => setHours(Math.max(0.1, Number(e.target.value)))} 
+                    min="0.1" 
+                    step="0.1" 
+                    required 
+                  />
+                </div>
+                
+                {uploadProgress > 0 && uploadProgress < 100 && (
+                  <div className="upload-progress">
+                    <div 
+                      className="progress-bar" 
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                    <span className="progress-text">{Math.round(uploadProgress)}%</span>
+                  </div>
+                )}
+                
+                <div className="modal-actions">
+                  <button 
+                    type="button" 
+                    className="cancel-button" 
+                    onClick={() => {
+                      setShowUploadModal(false);
+                      setUploadedFile(null);
+                      setTopic('');
+                      setHours(1);
+                      setUploadProgress(0);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="upload-submit-button" 
+                    disabled={!uploadedFile || !topic.trim() || hours <= 0 || loading}
+                  >
+                    {loading ? 'Uploading...' : 'Upload'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Rename File Modal */}
+      {showRenameModal && selectedFile && (
+        <div className="modal-overlay">
+          <div className="modal-container">
+            <div className="modal-header">
+              <h3>Rename File</h3>
+              <button 
+                className="modal-close-button" 
+                onClick={() => {
+                  setShowRenameModal(false);
+                  setSelectedFile(null);
+                  setNewFileName('');
+                }}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                handleRenameFile();
+              }}>
+                <div className="form-group">
+                  <label htmlFor="new-file-name">New File Name</label>
+                  <input 
+                    type="text" 
+                    id="new-file-name" 
+                    value={newFileName} 
+                    onChange={(e) => setNewFileName(e.target.value)} 
+                    placeholder="Enter new file name" 
+                    autoFocus
+                    required 
+                  />
+                  <p className="form-help-text">Enter a new name for your file. The file extension will be preserved.</p>
+                </div>
+                
+                <div className="modal-actions">
+                  <button 
+                    type="button" 
+                    className="cancel-button" 
+                    onClick={() => {
+                      setShowRenameModal(false);
+                      setSelectedFile(null);
+                      setNewFileName('');
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="rename-submit-button" 
+                    disabled={!newFileName.trim() || loading}
+                  >
+                    {loading ? 'Renaming...' : 'Rename'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && selectedFile && (
+        <div className="modal-overlay">
+          <div className="modal-container delete-confirm-modal">
+            <div className="modal-header">
+              <h3>Delete File</h3>
+              <button 
+                className="modal-close-button" 
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setSelectedFile(null);
+                }}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>Are you sure you want to delete this file?</p>
+              <p className="file-to-delete">
+                <span className="file-icon">{getFileIcon(selectedFile.file.type)}</span>
+                <span className="file-name">{selectedFile.file.name}</span>
+              </p>
+              <p className="warning-text">This action cannot be undone.</p>
+              
+              <div className="modal-actions">
+                <button 
+                  className="cancel-button" 
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setSelectedFile(null);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="delete-confirm-button" 
+                  onClick={handleDeleteFile}
+                  disabled={loading}
+                >
+                  {loading ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
