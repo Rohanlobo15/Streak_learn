@@ -70,8 +70,13 @@ export default function Dashboard() {
   // Format date as YYYY-MM-DD in IST
   const formatDate = (date) => {
     try {
-      const options = { timeZone: 'Asia/Kolkata' };
-      const istDate = new Date(date.toLocaleString('en-US', options));
+      // Create a date object in the local timezone
+      const localDate = new Date(date);
+      
+      // Convert to IST (UTC+5:30)
+      const istDate = new Date(localDate.getTime() + (5.5 * 60 * 60 * 1000));
+      
+      // Format as YYYY-MM-DD
       return istDate.toISOString().split('T')[0];
     } catch (error) {
       console.error('Error formatting date:', error);
@@ -237,6 +242,7 @@ export default function Dashboard() {
             
             const logs = [];
             studyLogsSnapshot.forEach(doc => {
+              // Ensure we're using the document ID as the date (YYYY-MM-DD format)
               logs.push({
                 date: doc.id,
                 hours: parseFloat(doc.data().hours) || 0,
@@ -278,7 +284,10 @@ export default function Dashboard() {
       // Set the study time data with all labels
       setStudyTimeData({ 
         labels: sortedLabels, 
-        data: currentUserData?.logs.map(log => log.hours) || [],
+        data: currentUserData ? sortedLabels.map(date => {
+          const log = currentUserData.logs.find(log => log.date === date);
+          return log ? log.hours : null;
+        }) : [],
         allUsersData: allUsersData
       });
     } catch (error) {
@@ -746,14 +755,25 @@ export default function Dashboard() {
 
   // Calculate total study hours
   const calculateTotalHours = () => {
-    if (!studyTimeData.data.length) return 0;
-    return studyTimeData.data.reduce((sum, hours) => sum + parseFloat(hours), 0).toFixed(1);
+    if (!studyTimeData.data || !studyTimeData.data.length) return 0;
+    
+    // Filter out null values and ensure all values are numbers before summing
+    const validHours = studyTimeData.data.filter(hours => hours !== null && !isNaN(parseFloat(hours)));
+    
+    if (validHours.length === 0) return 0;
+    
+    return validHours.reduce((sum, hours) => sum + parseFloat(hours), 0).toFixed(1);
   };
 
   // Format date to show only month and date (MM-DD)
   const formatDateToMonthDay = (dateString) => {
-    const date = new Date(dateString);
-    return `${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+    try {
+      const date = new Date(dateString);
+      return `${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+    } catch (error) {
+      console.error('Error formatting date to month-day:', error, dateString);
+      return dateString;
+    }
   };
 
   // Prepare data for streak history chart (right side, 0/1)
@@ -810,7 +830,8 @@ export default function Dashboard() {
         pointBackgroundColor: chartColors.borderColors[0],
         pointBorderColor: '#fff',
         pointBorderWidth: 2,
-        pointRadius: 3,
+        pointRadius: 4,
+        spanGaps: true, // This ensures gaps in data are properly shown
       },
       // Then add all other users' study hours
       ...(studyTimeData.allUsersData || [])  
@@ -834,7 +855,8 @@ export default function Dashboard() {
             pointBackgroundColor: chartColors.borderColors[colorIndex],
             pointBorderColor: '#fff',
             pointBorderWidth: 2,
-            pointRadius: 3,
+            pointRadius: 4,
+            spanGaps: true, // This ensures gaps in data are properly shown
           };
         })
     ],
@@ -1094,7 +1116,7 @@ export default function Dashboard() {
           <div className="stat-card">
             <h3>Weekly Rank</h3>
             <p className="stat-value">
-              {weeklyLeaderboard.findIndex(user => user.id === currentUser?.uid) + 1 || '-'}/{weeklyLeaderboard.length}
+              {weeklyLeaderboard.findIndex(user => user.id === currentUser?.uid) + 1 || '-'}
             </p>
           </div>
         </div>
