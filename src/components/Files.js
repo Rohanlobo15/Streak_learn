@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { db, storage } from '../firebase';
+import { db } from '../firebase';
 import { 
   collection, 
   getDocs, 
@@ -124,7 +124,7 @@ export default function Files() {
   };
 
   // Handle outside clicks to close sidebar
-  const handleOutsideClick = (e) => {
+  const handleOutsideClick = useCallback((e) => {
     if (sidebarOpen && !e.target.closest('.sidebar') && !e.target.closest('.menu-button') && !e.target.closest('.hamburger-menu')) {
       setSidebarOpen(false);
       setProfileSectionOpen(false);
@@ -133,7 +133,7 @@ export default function Files() {
     if (profileSectionOpen && !e.target.closest('.profile-section') && !e.target.closest('.profile-photo-container')) {
       setProfileSectionOpen(false);
     }
-  };
+  }, [sidebarOpen, profileSectionOpen]);
 
   // Add event listener for outside clicks
   useEffect(() => {
@@ -141,7 +141,7 @@ export default function Files() {
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
     };
-  }, [sidebarOpen, profileSectionOpen]);
+  }, [handleOutsideClick]);
 
   return (
     <div className="files-container">

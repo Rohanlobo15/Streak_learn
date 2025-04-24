@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { db, storage } from '../firebase';
@@ -172,7 +172,6 @@ export default function Dashboard() {
     return () => {
       unsubscribers.forEach(unsubscribe => unsubscribe());
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, navigate]);
 
   // Fetch user's streak data
@@ -521,7 +520,7 @@ export default function Dashboard() {
   };
 
   // Handle file upload
-  const handleFileUpload = async (file, studyDate) => {
+  const handleFileUpload = async (file) => {
     if (!file) return null;
     
     try {
@@ -531,7 +530,7 @@ export default function Dashboard() {
       const fileName = `${timestamp}_${file.name}`;
       
       // Create a storage reference
-      const storageRef = ref(storage, `study-files/${currentUser.uid}/${studyDate}/${fileName}`);
+      const storageRef = ref(storage, `study-files/${currentUser.uid}/${fileName}`);
       
       // Upload the file with progress monitoring
       const uploadTask = uploadBytesResumable(storageRef, file);
@@ -562,7 +561,7 @@ export default function Dashboard() {
         type: file.type,
         size: file.size,
         url: downloadURL,
-        path: `study-files/${currentUser.uid}/${studyDate}/${fileName}`
+        path: `study-files/${currentUser.uid}/${fileName}`
       };
     } catch (error) {
       console.error('Error in file upload:', error);
@@ -597,7 +596,7 @@ export default function Dashboard() {
       
       // Handle file upload if a file was selected
       if (uploadedFile) {
-        fileData = await handleFileUpload(uploadedFile, today);
+        fileData = await handleFileUpload(uploadedFile);
       }
       
       // Create or update study log
@@ -730,12 +729,12 @@ export default function Dashboard() {
   };
 
   // Close sidebar when clicking outside
-  const handleOutsideClick = (e) => {
+  const handleOutsideClick = useCallback((e) => {
     // If sidebar is open and the click is outside the sidebar
     if (sidebarOpen && !e.target.closest('.sidebar') && !e.target.closest('.hamburger-menu')) {
       setSidebarOpen(false);
     }
-  };
+  }, [sidebarOpen]);
 
   // Add event listener for outside clicks
   useEffect(() => {
@@ -743,7 +742,7 @@ export default function Dashboard() {
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
     };
-  }, [sidebarOpen]);
+  }, [handleOutsideClick]);
 
   // Calculate total study hours
   const calculateTotalHours = () => {
@@ -1020,6 +1019,9 @@ export default function Dashboard() {
           <h2>Streak Learn</h2>
         </div>
         <div className="header-right">
+          <button className="history-button" onClick={() => setShowHistoryModal(true)}>
+            View History
+          </button>
           <button className="logout-button" onClick={handleLogout}>Logout</button>
         </div>
       </header>
