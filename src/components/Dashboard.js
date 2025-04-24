@@ -66,6 +66,8 @@ export default function Dashboard() {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [fileUploadProgress, setFileUploadProgress] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [expandedChart, setExpandedChart] = useState(null); // 'study' | 'streak' | null
+  const [streakChartData, setStreakChartData] = useState({ labels: [], datasets: [] });
 
   // Format date as YYYY-MM-DD in IST
   const formatDate = (date) => {
@@ -295,59 +297,62 @@ export default function Dashboard() {
     }
   };
 
-  // Fetch streak history for all roles
+  // Fetch streak history for all roles and build binary streak data (0/1 per day)
   const fetchAllRolesStreakHistory = async () => {
     try {
       // Get all roles
       const rolesRef = collection(db, 'roles');
       const rolesSnapshot = await getDocs(rolesRef);
-      
+
       const allRolesData = [];
       const allLabels = new Set(); // To collect all unique dates
-      
+
       // Process each role
       for (const roleDoc of rolesSnapshot.docs) {
         if (roleDoc.data().taken) {
           const userId = roleDoc.data().userId;
           const roleName = roleDoc.id;
-          
           try {
             // Get streak history for this user
             const streakHistoryRef = collection(db, 'users', userId, 'streakHistory');
             const streakHistorySnapshot = await getDocs(streakHistoryRef);
-            
-            const history = [];
+            const streakDaysSet = new Set();
             streakHistorySnapshot.forEach(doc => {
-              history.push({
-                date: doc.id,
-                streak: doc.data().streak
-              });
-              allLabels.add(doc.id); // Add to our set of all dates
+              streakDaysSet.add(doc.id); // Only need the date
+              allLabels.add(doc.id);
             });
-            
-            // Sort by date
-            history.sort((a, b) => new Date(a.date) - new Date(b.date));
-            
-            // Add to our collection of all roles data
             allRolesData.push({
-              roleId: roleName,
-              userId: userId,
-              history: history
+              label: roleName,
+              userId,
+              streakDays: streakDaysSet
             });
           } catch (error) {
             console.error(`Error fetching streak history for ${roleName}:`, error);
           }
         }
       }
-      
+
       // Convert labels set to array and sort
       const sortedLabels = Array.from(allLabels).sort((a, b) => new Date(a) - new Date(b));
-      
-      // We don't need to store the recent labels separately as they're used directly in the chart data
-      
-      // Set the all roles streak data
-      setAllRolesStreakData(allRolesData);
-      
+
+      // Build binary streak data for each role
+      const datasets = allRolesData.map((role, idx) => ({
+        label: role.label,
+        data: sortedLabels.map(date => role.streakDays.has(date) ? 1 : 0),
+        fill: false,
+        borderColor: chartColors.backgroundColors[idx % chartColors.backgroundColors.length],
+        backgroundColor: chartColors.backgroundColors[idx % chartColors.backgroundColors.length],
+        tension: 0.2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        spanGaps: true
+      }));
+
+      setStreakChartData({
+        labels: sortedLabels,
+        datasets: datasets
+      });
+      setAllRolesStreakData(allRolesData); // preserve for other uses
     } catch (error) {
       console.error('Error fetching all roles streak history:', error);
     }
@@ -777,8 +782,9 @@ export default function Dashboard() {
   };
 
   // Prepare data for streak history chart (right side, 0/1)
-  const streakChartData = {
-    labels: streakData.labels.slice(-30).map(formatDateToMonthDay), // Last 30 days
+  const streakChartLabels = streakData.labels.slice(-30).map(formatDateToMonthDay);
+  const streakChartConfig = {
+    labels: streakChartLabels, // Last 30 days
     datasets: [
       {
         label: currentUser?.role || 'Your Streak',
@@ -797,10 +803,10 @@ export default function Dashboard() {
         .map((roleData, index) => {
           const colorIndex = (index % (chartColors.borderColors.length - 1)) + 1;
           return {
-            label: roleData.roleId,
-            data: streakData.labels.slice(-30).map(date => {
-              const entry = roleData.history.find(h => h.date === date);
-              return entry ? entry.streak : null;
+            label: roleData.label,
+            data: streakChartLabels.map(date => {
+              const entry = roleData.streakDays.has(date);
+              return entry ? 1 : 0;
             }),
             borderColor: chartColors.borderColors[colorIndex],
             backgroundColor: 'transparent',
@@ -902,6 +908,31 @@ export default function Dashboard() {
         borderWidth: 1,
       },
     ],
+  };
+
+  // Utility to get min/max from chart data
+  const getYDomain = (chartData) => {
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+    chartData.datasets.forEach(ds => {
+      ds.data.forEach(val => {
+        if (typeof val === 'number' && !isNaN(val)) {
+          if (val < min) min = val;
+          if (val > max) max = val;
+        }
+      });
+    });
+    // Add a little padding
+    if (min === Number.POSITIVE_INFINITY) min = 0;
+    if (max === Number.NEGATIVE_INFINITY) max = 1;
+    if (min === max) {
+      min = Math.max(0, min - 1);
+      max = max + 1;
+    } else {
+      min = Math.floor(min - 0.1 * Math.abs(max - min));
+      max = Math.ceil(max + 0.1 * Math.abs(max - min));
+    }
+    return { min, max };
   };
 
   // Chart options
@@ -1176,7 +1207,7 @@ export default function Dashboard() {
           <div className="dashboard-left-column">
             {/* Charts Row */}
             <div className="charts-row">
-              <div className="chart-card" title="Daily Study Hours">
+              <div className="chart-card" title="Daily Study Hours" onClick={() => setExpandedChart('study')} style={{ cursor: 'pointer' }}>
                 <div className="chart-wrapper" style={{ height: '300px', marginBottom: '20px' }}>
                   <Line data={studyTimeChartData} options={{
                     ...lineChartOptions,
@@ -1200,9 +1231,9 @@ export default function Dashboard() {
                   }} />
                 </div>
               </div>
-              <div className="chart-card" title="Streak History">
+              <div className="chart-card" title="Streak History" onClick={() => setExpandedChart('streak')} style={{ cursor: 'pointer' }}>
                 <div className="chart-wrapper" style={{ height: '300px', marginBottom: '20px' }}>
-                  <Line data={streakChartData} options={{
+                  <Line data={streakChartConfig} options={{
                     ...lineChartOptions,
                     scales: {
                       ...lineChartOptions.scales,
@@ -1226,7 +1257,76 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-            
+
+            {/* Expanded Chart Modal */}
+            {expandedChart && (
+              <div className="chart-modal-overlay" onClick={() => setExpandedChart(null)}>
+                <div className="chart-modal" onClick={e => e.stopPropagation()}>
+                  <button className="close-modal-btn" onClick={() => setExpandedChart(null)}>&times;</button>
+                  {expandedChart === 'study' && (() => {
+                    const yDomain = getYDomain(studyTimeChartData);
+                    return (
+                      <Line
+                        data={studyTimeChartData}
+                        options={{
+                          ...lineChartOptions,
+                          scales: {
+                            ...lineChartOptions.scales,
+                            y: {
+                              ...lineChartOptions.scales.y,
+                              min: yDomain.min,
+                              max: yDomain.max,
+                              ticks: {
+                                ...lineChartOptions.scales.y.ticks,
+                                callback: undefined,
+                                stepSize: undefined,
+                              },
+                              title: {
+                                ...lineChartOptions.scales.y.title,
+                                text: 'Study Hours',
+                              }
+                            }
+                          }
+                        }}
+                        height={600}
+                        width={1000}
+                      />
+                    );
+                  })()}
+                  {expandedChart === 'streak' && (() => {
+                    const yDomain = getYDomain(streakChartConfig);
+                    return (
+                      <Line
+                        data={streakChartConfig}
+                        options={{
+                          ...lineChartOptions,
+                          scales: {
+                            ...lineChartOptions.scales,
+                            y: {
+                              ...lineChartOptions.scales.y,
+                              min: yDomain.min,
+                              max: yDomain.max,
+                              ticks: {
+                                ...lineChartOptions.scales.y.ticks,
+                                callback: undefined,
+                                stepSize: undefined,
+                              },
+                              title: {
+                                ...lineChartOptions.scales.y.title,
+                                text: 'Streak Days',
+                              }
+                            }
+                          }
+                        }}
+                        height={600}
+                        width={1000}
+                      />
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
             {/* Leaderboards */}
             <div className="leaderboards-container">
               <section className="leaderboard-section">

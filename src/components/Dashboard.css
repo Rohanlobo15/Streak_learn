@@ -1135,3 +1135,52 @@ body {
   position: relative;
   cursor: pointer;
 }
+
+.chart-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.45);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-modal {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  padding: 32px 32px 24px 32px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow: auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.close-modal-btn {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  font-size: 2rem;
+  background: none;
+  border: none;
+  color: #4a6bff;
+  cursor: pointer;
+  z-index: 10;
+  transition: color 0.2s;
+}
+.close-modal-btn:hover {
+  color: #ff6584;
+}
+
+@media (max-width: 800px) {
+  .chart-modal {
+    padding: 10px;
+  }
+}
