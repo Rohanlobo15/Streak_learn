@@ -41,6 +41,9 @@ export default function Files() {
   const [expandedLogId, setExpandedLogId] = useState(null);
   const [summaries, setSummaries] = useState({});
   const [generatingSummary, setGeneratingSummary] = useState(false);
+  const [editingSummary, setEditingSummary] = useState(false);
+  const [customSummary, setCustomSummary] = useState('');
+  const [showWriteSummaryModal, setShowWriteSummaryModal] = useState(false);
   const fileInputRef = useRef(null);
 
   // Fetch all study logs (with or without files)
@@ -300,7 +303,7 @@ export default function Files() {
     setExpandedLogId(prevId => prevId === logId ? null : logId);
   };
   
-  // Generate summary for a log
+  // Generate summary for a log using AI
   const handleGenerateSummary = async (log) => {
     try {
       setGeneratingSummary(true);
@@ -342,6 +345,80 @@ export default function Files() {
       setError('Failed to generate summary');
     } finally {
       setGeneratingSummary(false);
+    }
+  };
+  
+  // Open modal to write a custom summary
+  const openWriteSummaryModal = (log) => {
+    setSelectedFile(log);
+    setCustomSummary(log.summary || '');
+    setShowWriteSummaryModal(true);
+  };
+  
+  // Save custom summary
+  const handleSaveCustomSummary = async () => {
+    if (!selectedFile) return;
+    
+    try {
+      setLoading(true);
+      
+      // Save custom summary to Firestore
+      const logDocRef = doc(db, 'studyLogs', currentUser.uid, 'logs', selectedFile.id);
+      await updateDoc(logDocRef, { summary: customSummary.trim() });
+      
+      // Update state
+      setSummaries(prev => ({
+        ...prev,
+        [selectedFile.id]: customSummary.trim()
+      }));
+      
+      // Close modal
+      setShowWriteSummaryModal(false);
+      setSelectedFile(null);
+      setCustomSummary('');
+      setLoading(false);
+    } catch (error) {
+      console.error('Error saving custom summary:', error);
+      setError('Failed to save summary');
+      setLoading(false);
+    }
+  };
+  
+  // Toggle edit mode for existing summary
+  const toggleEditSummary = (logId) => {
+    if (editingSummary) {
+      // Save the edited summary
+      handleSaveEditedSummary(logId);
+    } else {
+      // Enter edit mode
+      setEditingSummary(true);
+      setCustomSummary(summaries[logId] || '');
+    }
+  };
+  
+  // Save edited summary
+  const handleSaveEditedSummary = async (logId) => {
+    try {
+      setLoading(true);
+      
+      // Save edited summary to Firestore
+      const logDocRef = doc(db, 'studyLogs', currentUser.uid, 'logs', logId);
+      await updateDoc(logDocRef, { summary: customSummary.trim() });
+      
+      // Update state
+      setSummaries(prev => ({
+        ...prev,
+        [logId]: customSummary.trim()
+      }));
+      
+      // Exit edit mode
+      setEditingSummary(false);
+      setCustomSummary('');
+      setLoading(false);
+    } catch (error) {
+      console.error('Error saving edited summary:', error);
+      setError('Failed to save summary');
+      setLoading(false);
     }
   };
   
@@ -581,21 +658,63 @@ export default function Files() {
                     {/* Expanded summary section */}
                     {expandedLogId === log.id && (
                       <div className="summary-section">
-                        <h3>Summary</h3>
+                        <div className="summary-header">
+                          <h3>Summary</h3>
+                          {summaries[log.id] && (
+                            <div className="summary-controls">
+                              {editingSummary && expandedLogId === log.id ? (
+                                <button 
+                                  className="save-summary-button"
+                                  onClick={() => toggleEditSummary(log.id)}
+                                  disabled={loading}
+                                >
+                                  Save
+                                </button>
+                              ) : (
+                                <button 
+                                  className="edit-summary-button"
+                                  onClick={() => toggleEditSummary(log.id)}
+                                  disabled={loading}
+                                >
+                                  Edit
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        
                         {generatingSummary && log.id === expandedLogId ? (
                           <div className="generating-summary">Generating summary...</div>
                         ) : summaries[log.id] ? (
-                          <div className="summary-content">{summaries[log.id]}</div>
+                          editingSummary && expandedLogId === log.id ? (
+                            <textarea
+                              className="summary-editor"
+                              value={customSummary}
+                              onChange={(e) => setCustomSummary(e.target.value)}
+                              placeholder="Edit your summary here..."
+                            />
+                          ) : (
+                            <div className="summary-content">{summaries[log.id]}</div>
+                          )
                         ) : (
                           <div className="summary-actions">
                             <p>No summary available yet.</p>
-                            <button 
-                              className="generate-summary-button"
-                              onClick={() => handleGenerateSummary(log)}
-                              disabled={generatingSummary}
-                            >
-                              Generate Summary
-                            </button>
+                            <div className="summary-buttons">
+                              <button 
+                                className="generate-summary-button"
+                                onClick={() => handleGenerateSummary(log)}
+                                disabled={generatingSummary || loading}
+                              >
+                                Generate AI Summary
+                              </button>
+                              <button 
+                                className="write-summary-button"
+                                onClick={() => openWriteSummaryModal(log)}
+                                disabled={loading}
+                              >
+                                Write My Own
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -819,6 +938,60 @@ export default function Files() {
                   disabled={loading}
                 >
                   {loading ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Write Custom Summary Modal */}
+      {showWriteSummaryModal && selectedFile && (
+        <div className="modal-overlay">
+          <div className="modal-container summary-modal">
+            <div className="modal-header">
+              <h3>Write Summary</h3>
+              <button 
+                className="modal-close-button" 
+                onClick={() => {
+                  setShowWriteSummaryModal(false);
+                  setSelectedFile(null);
+                  setCustomSummary('');
+                }}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>Write a custom summary for your study session on <strong>{selectedFile.topic}</strong>:</p>
+              
+              <div className="form-group">
+                <textarea 
+                  className="summary-textarea"
+                  value={customSummary}
+                  onChange={(e) => setCustomSummary(e.target.value)}
+                  placeholder="Describe what you learned during this study session..."
+                  rows={6}
+                />
+              </div>
+              
+              <div className="modal-actions">
+                <button 
+                  className="cancel-button" 
+                  onClick={() => {
+                    setShowWriteSummaryModal(false);
+                    setSelectedFile(null);
+                    setCustomSummary('');
+                  }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="save-summary-button" 
+                  onClick={handleSaveCustomSummary}
+                  disabled={!customSummary.trim() || loading}
+                >
+                  {loading ? 'Saving...' : 'Save Summary'}
                 </button>
               </div>
             </div>
