@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
 import { 
@@ -24,6 +25,7 @@ export default function Deadlines() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileSectionOpen, setProfileSectionOpen] = useState(false);
   const { currentUser, logout } = useAuth();
+  const { darkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -342,6 +344,12 @@ export default function Deadlines() {
             <li><button className="nav-button" onClick={() => navigate('/posts')}>📝 <span>Posts</span></button></li>
             <li><button className="nav-button active" onClick={() => navigate('/deadlines')}>⏰ <span>Deadlines</span></button></li>
           </ul>
+          <div className="theme-toggle-container">
+            <button className="theme-toggle" onClick={toggleTheme}>
+              <span className="theme-toggle-text">{darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span>
+              <span className="theme-toggle-icon">{darkMode ? '☀️' : '🌙'}</span>
+            </button>
+          </div>
         </nav>
       </div>
       

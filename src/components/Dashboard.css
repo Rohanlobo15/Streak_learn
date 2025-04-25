@@ -21,12 +21,10 @@ body {
   margin: 0;
   padding: 0;
   width: 100%;
-  background-color: var(--background-color);
+  background-color: var(--bg-primary);
   font-family: 'Roboto', 'Segoe UI', sans-serif;
-  color: #333;
-  background-color: #f9f9f9;
-  min-height: 100vh;
   color: var(--text-primary);
+  min-height: 100vh;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -39,11 +37,12 @@ body {
   min-height: 100vh;
   width: 100%;
   max-width: 100vw;
-  background-color: #f8f9fa;
+  background-color: var(--bg-primary);
   font-family: 'Roboto', sans-serif;
   position: relative;
   overflow-x: hidden;
   box-sizing: border-box;
+  color: var(--text-primary);
 }
 
 .dashboard-header {
@@ -51,8 +50,8 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  background-color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: var(--header-bg);
+  box-shadow: 0 2px 4px var(--shadow-color);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -98,13 +97,13 @@ body {
 .hamburger-menu span {
   width: 100%;
   height: 3px;
-  background-color: #333;
+  background-color: var(--text-primary);
   border-radius: 3px;
   transition: all 0.3s ease;
 }
 
 .hamburger-menu:hover span {
-  background-color: #4a6bff;
+  background-color: var(--accent-color);
 }
 
 .logout-button {
@@ -124,11 +123,11 @@ body {
 
 .dashboard-title {
   font-size: 1.5rem;
-  color: #2563eb;
+  color: var(--accent-color);
   margin: 0;
   font-weight: 900;
   letter-spacing: -1px;
-  text-shadow: 0 1px 4px rgba(74, 107, 255, 0.07);
+  text-shadow: 0 1px 4px var(--shadow-color);
   transition: color 0.2s;
   cursor: pointer;
   text-decoration: underline;
@@ -171,12 +170,12 @@ body {
 }
 
 .stat-card {
-  background-color: white;
+  background-color: var(--card-bg);
   border-radius: 8px;
   padding: 0.75rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 4px var(--shadow-color);
   text-align: center;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
 }
 
 @media (max-width: 480px) {
@@ -187,12 +186,12 @@ body {
 
 .stat-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 16px var(--shadow-color);
 }
 
 .stat-card h3 {
   margin-top: 0;
-  color: #666;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   font-weight: 500;
   text-transform: uppercase;
@@ -202,7 +201,7 @@ body {
 .stat-value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #4a6bff;
+  color: var(--accent-color);
   margin: 5px 0 0;
   line-height: 1.2;
 }
@@ -742,14 +741,14 @@ body {
 
 .sidebar {
   width: 250px;
-  background-color: #fff;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+  background-color: var(--sidebar-bg);
+  box-shadow: 2px 0 5px var(--shadow-color);
   height: 100vh;
   position: fixed;
   left: 0;
   top: 0;
   z-index: 100;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, background-color 0.3s ease;
   overflow-y: auto;
   transform: translateX(-100%); /* Default state is hidden */
 }
@@ -1373,9 +1372,9 @@ body {
 }
 
 .chart-modal {
-  background: #fff;
+  background: var(--card-bg);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  box-shadow: 0 8px 32px var(--shadow-color);
   padding: 32px 32px 24px 32px;
   max-width: 95vw;
   max-height: 90vh;
@@ -1384,6 +1383,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  color: var(--text-primary);
 }
 
 @media (max-width: 768px) {

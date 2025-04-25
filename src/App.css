@@ -1,3 +1,42 @@
+/* Theme Variables */
+:root {
+  /* Light Theme (default) */
+  --bg-primary: #f5f7fb;
+  --bg-secondary: #ffffff;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --accent-color: #4a6bff;
+  --border-color: #e6e9f0;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --hover-bg: #f0f2f5;
+  --card-bg: #ffffff;
+  --sidebar-bg: #ffffff;
+  --header-bg: #ffffff;
+}
+
+/* Dark Theme */
+body.dark-theme {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --text-primary: #e6e6e6;
+  --text-secondary: #b0b0b0;
+  --accent-color: #4a6bff;
+  --border-color: #2a2a4a;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --hover-bg: #2a2a4a;
+  --card-bg: #16213e;
+  --sidebar-bg: #16213e;
+  --header-bg: #16213e;
+}
+
+/* Apply smooth transitions when theme changes */
+body, .sidebar, .main-content, .files-header, .files-container,
+.deadlines-container, .dashboard-container, .messaging-container,
+.posts-container, .files-list-header, .file-item, .modal-container,
+.deadline-card, .summary-section, .nav-button, .toggle-button {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
 .App {
   text-align: center;
 }

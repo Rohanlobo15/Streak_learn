@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { db, storage } from '../firebase';
 import { 
@@ -23,6 +24,7 @@ import './Posts.css';
 export default function Posts() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { currentUser, logout } = useAuth();
+  const { darkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -576,6 +578,12 @@ export default function Posts() {
             <li><button className="nav-button" onClick={() => navigate('/deadlines')}>📅 <span>Deadlines</span></button></li>
             <li><button className="nav-button active" onClick={() => navigate('/posts')}>📝 <span>Posts</span></button></li>
           </ul>
+          <div className="theme-toggle-container">
+            <button className="theme-toggle" onClick={toggleTheme}>
+              <span className="theme-toggle-text">{darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span>
+              <span className="theme-toggle-icon">{darkMode ? '☀️' : '🌙'}</span>
+            </button>
+          </div>
         </nav>
       </div>
       

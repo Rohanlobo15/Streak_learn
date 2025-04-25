@@ -4,8 +4,9 @@
   flex-direction: column;
   min-height: 100vh;
   width: 100%;
-  background-color: #f5f7fb;
+  background-color: var(--bg-primary);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text-primary);
 }
 
 /* Sidebar Styles */
@@ -15,9 +16,9 @@
   left: -300px;
   width: 280px;
   height: 100vh;
-  background-color: #ffffff;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-  transition: left 0.3s ease;
+  background-color: var(--sidebar-bg);
+  box-shadow: 2px 0 10px var(--shadow-color);
+  transition: left 0.3s ease, background-color 0.3s ease;
   z-index: 1000;
   overflow-y: auto;
   padding-top: 1rem;
@@ -35,7 +36,7 @@
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #4a4a4a;
+  color: var(--text-primary);
 }
 
 .sidebar-header {
@@ -88,17 +89,54 @@
   margin: 0;
   font-size: 1.2rem;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .user-email {
   margin: 0.25rem 0 0;
   font-size: 0.9rem;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .sidebar-nav {
   padding: 1rem;
+}
+
+/* Theme Toggle Button */
+.theme-toggle-container {
+  padding: 0.5rem 1rem 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: var(--hover-bg);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.theme-toggle:hover {
+  background-color: rgba(74, 107, 255, 0.1);
+}
+
+.theme-toggle-text {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.theme-toggle-icon {
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sidebar-nav ul {
@@ -121,18 +159,18 @@
   border-radius: 6px;
   text-align: left;
   font-size: 1rem;
-  color: #4a4a4a;
+  color: var(--text-primary);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .nav-button:hover {
-  background-color: #f0f2f5;
+  background-color: var(--hover-bg);
 }
 
 .nav-button.active {
-  background-color: #e6ebff;
-  color: #4a6bff;
+  background-color: rgba(74, 107, 255, 0.15);
+  color: var(--accent-color);
   font-weight: 500;
 }
 
@@ -181,8 +219,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 2rem;
-  background-color: #ffffff;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background-color: var(--header-bg);
+  box-shadow: 0 2px 10px var(--shadow-color);
   z-index: 10;
 }
 
@@ -221,15 +259,15 @@
 .files-header h2 {
   margin: 0;
   font-size: 1.8rem;
-  color: #32325d;
-  font-weight: 700;
+  font-weight: 600;
+  color: var(--accent-color);
 }
 
 .header-left h2 {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
-  color: #4a6bff;
+  color: var(--text-primary);
 }
 
 .user-info {
@@ -349,11 +387,11 @@
 .files-list-header {
   display: flex;
   padding: 12px 15px;
-  background-color: #f8f9fe;
+  background-color: var(--card-bg);
   border-radius: 8px 8px 0 0;
   font-weight: 600;
-  color: #32325d;
-  border-bottom: 1px solid #e6e9f0;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -376,25 +414,25 @@
 .file-item {
   display: flex;
   padding: 15px;
-  border-bottom: 1px solid #e6e9f0;
-  transition: all 0.3s ease;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--card-bg);
+  transition: background-color 0.2s;
+  cursor: pointer;
   width: 100%;
   overflow: visible;
-  background-color: #ffffff;
-  cursor: pointer;
   height: 60px; /* Fixed height for consistency */
 }
 
 .file-item:hover {
-  background-color: #f8f9fe;
+  background-color: var(--hover-bg);
 }
 
 .file-item:nth-child(odd):not(.expanded) {
-  background-color: #fafbfd;
+  background-color: var(--bg-secondary);
 }
 
 .file-item.expanded {
-  background-color: #eef1f8;
+  background-color: rgba(74, 107, 255, 0.1);
   border-bottom: none;
   border-radius: 8px 8px 0 0;
   transition: all 0.3s ease;

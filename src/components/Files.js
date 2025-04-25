@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { db, storage } from '../firebase';
 import { generateSummary, extractFileContent, truncateText } from '../utils/geminiApi';
 import { 
@@ -23,6 +24,7 @@ import './Files.css';
 
 export default function Files() {
   const { currentUser, logout } = useAuth();
+  const { darkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -457,6 +459,12 @@ export default function Files() {
             <li><button className="nav-button" onClick={() => navigate('/deadlines')}>📅 <span>Deadlines</span></button></li>
             <li><button className="nav-button active" onClick={() => navigate('/posts')}>📝 <span>Posts</span></button></li>
           </ul>
+          <div className="theme-toggle-container">
+            <button className="theme-toggle" onClick={toggleTheme}>
+              <span className="theme-toggle-text">{darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span>
+              <span className="theme-toggle-icon">{darkMode ? '☀️' : '🌙'}</span>
+            </button>
+          </div>
         </nav>
       </div>
       

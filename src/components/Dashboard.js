@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { db, storage } from '../firebase';
 import { 
@@ -22,6 +23,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileSectionOpen, setProfileSectionOpen] = useState(false);
+  const { darkMode, toggleTheme } = useTheme();
   // Set chart theme colors
   const chartColors = {
     primary: '#4a6bff',
@@ -1234,6 +1236,12 @@ export default function Dashboard() {
             <li><button className="nav-button" onClick={() => navigate('/posts')}>📝 <span>Posts</span></button></li>
             <li><button className="nav-button" onClick={() => navigate('/deadlines')}>⏰ <span>Deadlines</span></button></li>
           </ul>
+          <div className="theme-toggle-container">
+            <button className="theme-toggle" onClick={toggleTheme}>
+              <span className="theme-toggle-text">{darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span>
+              <span className="theme-toggle-icon">{darkMode ? '☀️' : '🌙'}</span>
+            </button>
+          </div>
         </nav>
       </div>
       

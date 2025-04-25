@@ -3,8 +3,9 @@
   flex-direction: column;
   min-height: 100vh;
   width: 100%;
-  background-color: #f5f7fb;
+  background-color: var(--bg-primary);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text-primary);
 }
 
 /* Header Styles */
@@ -13,8 +14,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 2rem;
-  background-color: #ffffff;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background-color: var(--header-bg);
+  box-shadow: 0 2px 10px var(--shadow-color);
   z-index: 10;
 }
 
@@ -28,7 +29,7 @@
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
-  color: #4a6bff;
+  color: var(--accent-color);
 }
 
 .hamburger-menu {
@@ -46,7 +47,7 @@
 .hamburger-menu span {
   width: 100%;
   height: 2px;
-  background-color: #4a6bff;
+  background-color: var(--accent-color);
   transition: all 0.3s ease;
 }
 
@@ -58,17 +59,17 @@
 
 .logout-button {
   padding: 0.5rem 1rem;
-  background-color: #f0f2f5;
-  color: #4a4a4a;
+  background-color: var(--hover-bg);
+  color: var(--text-primary);
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-weight: 500;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .logout-button:hover {
-  background-color: #e4e6e9;
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 /* Sidebar Styles */
@@ -78,9 +79,9 @@
   left: -300px;
   width: 280px;
   height: 100vh;
-  background-color: #ffffff;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-  transition: left 0.3s ease;
+  background-color: var(--sidebar-bg);
+  box-shadow: 2px 0 10px var(--shadow-color);
+  transition: left 0.3s ease, background-color 0.3s ease;
   z-index: 1000;
   overflow-y: auto;
   padding-top: 1rem;
@@ -98,12 +99,12 @@
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #4a4a4a;
+  color: var(--text-primary);
 }
 
 .sidebar-header {
   padding: 1rem;
-  border-bottom: 1px solid #eaeaea;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .profile-section {
@@ -151,13 +152,13 @@
   margin: 0;
   font-size: 1.2rem;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .user-email {
   margin: 0.25rem 0 0;
   font-size: 0.9rem;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .sidebar-nav {
@@ -184,18 +185,18 @@
   border-radius: 6px;
   text-align: left;
   font-size: 1rem;
-  color: #4a4a4a;
+  color: var(--text-primary);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .nav-button:hover {
-  background-color: #f0f2f5;
+  background-color: var(--hover-bg);
 }
 
 .nav-button.active {
-  background-color: #e6ebff;
-  color: #4a6bff;
+  background-color: rgba(74, 107, 255, 0.15);
+  color: var(--accent-color);
   font-weight: 500;
 }
 
@@ -228,7 +229,7 @@
   justify-content: center;
   margin-bottom: 2rem;
   border-radius: 8px;
-  background-color: #f0f2f5;
+  background-color: var(--hover-bg);
   padding: 0.5rem;
   max-width: 300px;
   margin-left: auto;
@@ -241,7 +242,7 @@
   background: none;
   border-radius: 6px;
   font-weight: 500;
-  color: #666;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
@@ -250,9 +251,9 @@
 }
 
 .toggle-button.active {
-  background-color: #fff;
-  color: #4a6bff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: var(--card-bg);
+  color: var(--accent-color);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .toggle-icon {
@@ -307,9 +308,9 @@
 
 /* Create Post Form Styles */
 .create-post-container {
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px var(--shadow-color);
   padding: 1.5rem;
   margin-bottom: 2rem;
 }
@@ -318,7 +319,7 @@
   margin-top: 0;
   margin-bottom: 1.5rem;
   font-size: 1.4rem;
-  color: #333;
+  color: var(--text-primary);
   text-align: center;
 }
 
@@ -330,18 +331,20 @@
   width: 100%;
   min-height: 100px;
   padding: 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   resize: vertical;
   font-family: inherit;
   font-size: 1rem;
   margin-bottom: 1rem;
-  transition: border 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
-  background-color: #f9f9f9;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .post-input-container textarea:focus {
   outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--accent-color);
   border-color: #4a6bff;
   box-shadow: 0 0 0 3px rgba(74, 107, 255, 0.2);
   transform: translateY(-2px);
@@ -527,10 +530,11 @@
 }
 
 .post-card {
-  background-color: #ffffff;
+  background-color: var(--card-bg);
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  box-shadow: 0 2px 8px var(--shadow-color);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .post-header {
@@ -538,7 +542,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .post-user-info {
@@ -569,13 +573,13 @@
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .post-timestamp {
   margin: 0;
   font-size: 0.8rem;
-  color: #777;
+  color: var(--text-secondary);
 }
 
 .delete-post-button {
@@ -595,14 +599,10 @@
 
 .post-content {
   padding: 1rem;
-}
-
-.post-content p {
-  margin-top: 0;
-  margin-bottom: 1rem;
+  margin: 1rem 0;
   font-size: 1rem;
   line-height: 1.5;
-  color: #333;
+  color: var(--text-primary);
   white-space: pre-wrap;
 }
 
@@ -669,7 +669,7 @@
 .post-files {
   margin-top: 1rem;
   padding: 1rem;
-  background-color: #f8f9fa;
+  background-color: var(--bg-secondary);
   border-radius: 6px;
 }
 
@@ -677,7 +677,7 @@
   margin-top: 0;
   margin-bottom: 0.75rem;
   font-size: 1rem;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .files-list {
@@ -731,7 +731,7 @@
 .post-actions {
   display: flex;
   padding: 0.75rem 1rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-color);
   gap: 1rem;
 }
 
@@ -760,15 +760,15 @@
 /* Comments Section Styles */
 .comments-section {
   padding: 1rem;
-  border-top: 1px solid #eee;
-  background-color: #f8f9fa;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
 }
 
 .comments-section h4 {
   margin-top: 0;
   margin-bottom: 1rem;
   font-size: 1rem;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .no-comments-message {
@@ -826,13 +826,13 @@
   margin: 0;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .comment-timestamp {
   margin: 0;
   font-size: 0.75rem;
-  color: #777;
+  color: var(--text-secondary);
 }
 
 .delete-comment-button {
@@ -854,7 +854,7 @@
   margin: 0;
   font-size: 0.9rem;
   line-height: 1.4;
-  color: #333;
+  color: var(--text-primary);
   white-space: pre-wrap;
 }
 
@@ -865,7 +865,7 @@
   margin-top: 15px;
   padding: 8px;
   border-radius: 24px;
-  background-color: #f5f5f5;
+  background-color: var(--bg-secondary);
   transition: all 0.3s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
@@ -879,7 +879,7 @@
 .comment-input {
   flex: 1;
   padding: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 20px;
   resize: none;
   font-family: inherit;
@@ -887,7 +887,8 @@
   min-height: 40px;
   max-height: 100px;
   transition: all 0.3s ease;
-  background-color: #f5f5f5;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .comment-input:focus {
@@ -930,8 +931,6 @@
 .comment-input::placeholder {
   transition: all 0.3s ease;
 }
-
-
 
 .submit-comment-button {
   padding: 8px 16px;
@@ -1029,24 +1028,26 @@
 }
 
 .delete-confirm-modal {
-  background-color: white;
+  background-color: var(--card-bg);
+  padding: 2rem;
   border-radius: 8px;
-  padding: 1.5rem;
-  width: 90%;
   max-width: 400px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 4px 20px var(--shadow-color);
+  color: var(--text-primary);
 }
 
 .delete-confirm-modal h3 {
   margin-top: 0;
+  color: var(--text-primary);
+  font-size: 1.3rem;
   margin-bottom: 1rem;
-  color: #333;
-  font-size: 1.2rem;
 }
 
 .delete-confirm-modal p {
   margin-bottom: 1.5rem;
-  color: #555;
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 

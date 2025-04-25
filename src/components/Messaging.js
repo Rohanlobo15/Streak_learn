@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { db, storage } from '../firebase';
 import { 
   collection, 
@@ -25,6 +26,7 @@ import './Messaging.css';
 
 export default function Messaging() {
   const { currentUser } = useAuth();
+  const { darkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
@@ -438,6 +440,12 @@ export default function Messaging() {
             <li><button className="nav-button" onClick={() => navigate('/deadlines')}>📅 <span>Deadlines</span></button></li>
             <li><button className="nav-button" onClick={() => navigate('/posts')}>📝 <span>Posts</span></button></li>
           </ul>
+          <div className="theme-toggle-container">
+            <button className="theme-toggle" onClick={toggleTheme}>
+              <span className="theme-toggle-text">{darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span>
+              <span className="theme-toggle-icon">{darkMode ? '☀️' : '🌙'}</span>
+            </button>
+          </div>
         </nav>
       </div>
       
