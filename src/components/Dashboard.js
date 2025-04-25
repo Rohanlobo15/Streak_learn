@@ -1293,7 +1293,7 @@ export default function Dashboard() {
                 id="file-upload"
               />
               <label htmlFor="file-upload" className="file-label">
-                {uploadedFile ? uploadedFile.name : 'Optional: Upload a file'}
+                {uploadedFile ? uploadedFile.name : <span>📎</span>}
               </label>
               {fileUploadProgress > 0 && fileUploadProgress < 100 && (
                 <div className="upload-progress-container">

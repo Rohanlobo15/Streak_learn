@@ -336,6 +336,7 @@
   flex-direction: column;
   height: 100%;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .loading-messages, .no-messages {
@@ -615,6 +616,7 @@
   width: 100%;
   z-index: 10;
   margin: 0;
+  box-sizing: border-box;
 }
 
 .selected-file {
@@ -750,6 +752,23 @@
   .message {
     max-width: 90%;
   }
+  
+  .messaging-header {
+    padding: 0.75rem 1.5rem;
+  }
+  
+  .header-left h2 {
+    font-size: 1.3rem;
+  }
+  
+  .members-count {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+  }
+  
+  .messages-container {
+    padding: 1.25rem 1.25rem 4rem 1.25rem;
+  }
 }
 
 @media (max-width: 768px) {
@@ -776,6 +795,43 @@
   .file-name {
     max-width: 180px;
   }
+  
+  .messaging-header {
+    padding: 0.75rem 1rem;
+  }
+  
+  .header-left h2 {
+    font-size: 1.2rem;
+  }
+  
+  .members-count {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .messages-container {
+    padding: 1rem 1rem 4rem 1rem;
+  }
+  
+  .message-bubble {
+    padding: 0.6rem 0.8rem;
+  }
+  
+  .message-text {
+    font-size: 0.9rem;
+  }
+  
+  .sidebar {
+    width: 250px;
+  }
+  
+  .message-input-form {
+    padding: 0.6rem 0.75rem;
+  }
+  
+  .message-input {
+    padding: 0.6rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -789,5 +845,156 @@
   
   .image-preview img {
     max-width: 200px;
+  }
+  
+  .messaging-header {
+    padding: 0.6rem 0.75rem;
+  }
+  
+  .header-left h2 {
+    font-size: 1.1rem;
+  }
+  
+  .members-count {
+    padding: 0.25rem 0.4rem;
+    font-size: 0.75rem;
+  }
+  
+  .messages-container {
+    padding: 0.75rem 0.75rem 4rem 0.75rem;
+  }
+  
+  .message-bubble {
+    padding: 0.5rem 0.7rem;
+    border-radius: 16px;
+  }
+  
+  .message-text {
+    font-size: 0.85rem;
+  }
+  
+  .message-time {
+    font-size: 0.65rem;
+  }
+  
+  .sidebar {
+    width: 230px;
+  }
+  
+  .message-input-form {
+    padding: 0.5rem 0.6rem;
+  }
+  
+  .message-input-container {
+    padding: 0.4rem;
+  }
+  
+  .message-input {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
+  
+  .send-button {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .attach-button {
+    padding: 0.4rem;
+    font-size: 1.1rem;
+  }
+  
+  .message-avatar {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .message-content {
+    max-width: calc(100% - 40px);
+  }
+  
+  .file-icon {
+    font-size: 1.3rem;
+  }
+  
+  .file-preview {
+    padding: 0.4rem;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 380px) {
+  .messaging-header {
+    padding: 0.5rem 0.6rem;
+  }
+  
+  .header-left h2 {
+    font-size: 1rem;
+  }
+  
+  .members-count {
+    padding: 0.2rem 0.35rem;
+    font-size: 0.7rem;
+  }
+  
+  .messages-container {
+    padding: 0.6rem 0.6rem 4rem 0.6rem;
+  }
+  
+  .message-bubble {
+    padding: 0.4rem 0.6rem;
+  }
+  
+  .message-text {
+    font-size: 0.8rem;
+  }
+  
+  .message-time {
+    font-size: 0.6rem;
+  }
+  
+  .sidebar {
+    width: 220px;
+  }
+  
+  .message-input-form {
+    padding: 0.4rem 0.5rem;
+  }
+  
+  .message-input {
+    padding: 0.4rem;
+    font-size: 0.85rem;
+  }
+  
+  .send-button {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .attach-button {
+    padding: 0.3rem;
+    font-size: 1rem;
+  }
+  
+  .message-avatar {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .message-content {
+    max-width: calc(100% - 36px);
+  }
+  
+  .image-preview img {
+    max-width: 180px;
+  }
+  
+  .message-file .file-name {
+    max-width: 100px;
+    font-size: 0.8rem;
+  }
+  
+  .file-size {
+    font-size: 0.7rem;
   }
 }

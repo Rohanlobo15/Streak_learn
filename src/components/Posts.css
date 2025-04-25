@@ -1087,6 +1087,32 @@
 }
 
 /* Responsive Styles */
+@media (max-width: 992px) {
+  .posts-header {
+    padding: 0.85rem 1.5rem;
+  }
+  
+  .posts-main-content {
+    padding: 1.5rem;
+  }
+  
+  .posts-layout {
+    gap: 1.5rem;
+  }
+  
+  .post-content {
+    font-size: 0.95rem;
+  }
+  
+  .header-left h2 {
+    font-size: 1.3rem;
+  }
+  
+  .sidebar {
+    width: 260px;
+  }
+}
+
 @media (max-width: 768px) {
   .posts-header {
     padding: 0.75rem 1rem;
@@ -1122,5 +1148,253 @@
   .delete-post-button, .delete-comment-button {
     margin-top: 0.5rem;
     align-self: flex-end;
+  }
+  
+  .header-left h2 {
+    font-size: 1.2rem;
+  }
+  
+  .posts-layout {
+    gap: 1rem;
+  }
+  
+  .create-post-container {
+    padding: 1.25rem;
+  }
+  
+  .create-post-container h2 {
+    font-size: 1.2rem;
+    margin-bottom: 1.25rem;
+  }
+  
+  .post-input-container textarea {
+    min-height: 80px;
+    padding: 10px;
+    font-size: 0.95rem;
+  }
+  
+  .post-card {
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .post-content {
+    font-size: 0.9rem;
+  }
+  
+  .sidebar {
+    width: 240px;
+  }
+  
+  .toggle-button {
+    padding: 0.6rem 1.25rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .posts-header {
+    padding: 0.6rem 0.8rem;
+  }
+  
+  .header-left h2 {
+    font-size: 1.1rem;
+  }
+  
+  .posts-main-content {
+    padding: 0.75rem;
+  }
+  
+  .create-post-container {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .create-post-container h2 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .post-input-container textarea {
+    min-height: 70px;
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+  
+  .post-card {
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+  }
+  
+  .post-content {
+    font-size: 0.85rem;
+  }
+  
+  .post-user-name {
+    font-size: 0.9rem;
+  }
+  
+  .post-timestamp {
+    font-size: 0.75rem;
+  }
+  
+  .comment-input {
+    padding: 8px;
+    font-size: 0.85rem;
+    min-height: 36px;
+  }
+  
+  .comment-user-name {
+    font-size: 0.85rem;
+  }
+  
+  .comment-timestamp {
+    font-size: 0.7rem;
+  }
+  
+  .comment-content {
+    font-size: 0.85rem;
+  }
+  
+  .sidebar {
+    width: 220px;
+  }
+  
+  .toggle-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+  
+  .view-toggle {
+    margin-bottom: 1.5rem;
+    max-width: 250px;
+  }
+  
+  .post-avatar, .comment-avatar {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .like-button, .comment-button {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .posts-header {
+    padding: 0.5rem 0.7rem;
+  }
+  
+  .header-left h2 {
+    font-size: 1rem;
+  }
+  
+  .hamburger-menu {
+    width: 20px;
+    height: 16px;
+  }
+  
+  .logout-button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+  
+  .posts-main-content {
+    padding: 0.6rem;
+  }
+  
+  .create-post-container {
+    padding: 0.85rem;
+    margin-bottom: 1.25rem;
+  }
+  
+  .create-post-container h2 {
+    font-size: 1rem;
+    margin-bottom: 0.85rem;
+  }
+  
+  .post-input-container textarea {
+    min-height: 60px;
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+  
+  .post-card {
+    padding: 0.85rem;
+    margin-bottom: 1rem;
+  }
+  
+  .post-content {
+    font-size: 0.8rem;
+  }
+  
+  .post-user-name {
+    font-size: 0.85rem;
+  }
+  
+  .post-timestamp {
+    font-size: 0.7rem;
+  }
+  
+  .comment-input {
+    padding: 6px;
+    font-size: 0.8rem;
+    min-height: 32px;
+  }
+  
+  .comment-user-name {
+    font-size: 0.8rem;
+  }
+  
+  .comment-timestamp {
+    font-size: 0.65rem;
+  }
+  
+  .comment-content {
+    font-size: 0.8rem;
+  }
+  
+  .sidebar {
+    width: 200px;
+  }
+  
+  .toggle-button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+  
+  .view-toggle {
+    margin-bottom: 1.25rem;
+    max-width: 220px;
+    padding: 0.4rem;
+  }
+  
+  .post-avatar, .comment-avatar {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .like-button, .comment-button {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .delete-confirm-modal {
+    padding: 1.25rem;
+    max-width: 300px;
+  }
+  
+  .delete-confirm-modal h3 {
+    font-size: 1.1rem;
+  }
+  
+  .delete-confirm-modal p {
+    font-size: 0.9rem;
+  }
+  
+  .cancel-button, .delete-button {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.85rem;
   }
 }
