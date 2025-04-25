@@ -212,6 +212,10 @@
   .menu-button {
     display: block;
   }
+  
+  .sidebar.open ~ .main-content .hamburger-menu {
+    display: none;
+  }
 }
 
 .files-header h2 {
@@ -276,6 +280,12 @@
   border: none;
   cursor: pointer;
   padding: 0;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar.open ~ .main-content .hamburger-menu {
+  opacity: 0;
+  visibility: hidden;
 }
 
 .hamburger-menu span {
