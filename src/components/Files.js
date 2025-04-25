@@ -33,18 +33,14 @@ export default function Files() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [newFileName, setNewFileName] = useState('');
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [topic, setTopic] = useState('');
-  const [hours, setHours] = useState(1);
+  // File upload functionality moved to Dashboard
   const [expandedLogId, setExpandedLogId] = useState(null);
   const [summaries, setSummaries] = useState({});
   const [generatingSummary, setGeneratingSummary] = useState(false);
   const [editingSummary, setEditingSummary] = useState(false);
   const [customSummary, setCustomSummary] = useState('');
   const [showWriteSummaryModal, setShowWriteSummaryModal] = useState(false);
-  const fileInputRef = useRef(null);
+
 
   // Fetch all study logs (with or without files)
   const fetchFiles = async () => {
@@ -191,112 +187,7 @@ export default function Files() {
     }
   };
   
-  // Handle file upload
-  const handleFileSelect = (e) => {
-    if (e.target.files.length > 0) {
-      setUploadedFile(e.target.files[0]);
-    }
-  };
-  
-  const handleUploadFile = async (e) => {
-    e.preventDefault();
-    
-    if (!uploadedFile || !topic.trim() || hours <= 0) return;
-    
-    try {
-      setLoading(true);
-      
-      // Create a unique filename with timestamp to prevent overwriting
-      const timestamp = new Date().getTime();
-      const originalFileName = uploadedFile.name;
-      const filePath = `files/${currentUser.uid}/${timestamp}_${originalFileName}`;
-      
-      // Upload file to Firebase Storage
-      const storageRef = ref(storage, filePath);
-      const uploadTask = uploadBytesResumable(storageRef, uploadedFile);
-      
-      // Monitor upload progress
-      uploadTask.on('state_changed', 
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setUploadProgress(progress);
-        },
-        (error) => {
-          console.error('Error uploading file:', error);
-          setError('Failed to upload file');
-          setLoading(false);
-        },
-        async () => {
-          // Get download URL
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          
-          // Create a unique log ID using timestamp to prevent overwriting
-          const uniqueLogId = `log_${timestamp}`;
-          const logDocRef = doc(db, 'studyLogs', currentUser.uid, 'logs', uniqueLogId);
-          
-          // Try to extract content from text-based files
-          let fileContent = null;
-          let summary = null;
-          
-          try {
-            // Extract text content from the file if possible
-            fileContent = await extractFileContent(uploadedFile);
-            
-            if (fileContent) {
-              // Truncate content to avoid API limits
-              const truncatedContent = truncateText(fileContent);
-              
-              // Generate summary using Gemini API
-              summary = await generateSummary(topic.trim(), Number(hours), truncatedContent);
-            } else {
-              // Generate summary without file content
-              summary = await generateSummary(topic.trim(), Number(hours));
-            }
-          } catch (error) {
-            console.error('Error generating summary:', error);
-            // Continue without summary if there's an error
-          }
-          
-          // Create a new log document with the uploaded file and summary
-          await setDoc(logDocRef, {
-            timestamp: new Date(),
-            topic: topic.trim(),
-            hours: Number(hours),
-            file: {
-              name: originalFileName,
-              type: uploadedFile.type,
-              size: uploadedFile.size,
-              url: downloadURL,
-              path: filePath
-            },
-            summary: summary
-          });
-          
-          // Add summary to state
-          if (summary) {
-            setSummaries(prev => ({
-              ...prev,
-              [uniqueLogId]: summary
-            }));
-          }
-          
-          // Reset form
-          setUploadedFile(null);
-          setTopic('');
-          setHours(1);
-          setUploadProgress(0);
-          setShowUploadModal(false);
-          
-          // Refresh files list
-          fetchFiles();
-        }
-      );
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      setError('Failed to upload file');
-      setLoading(false);
-    }
-  };
+  // File upload functionality moved to Dashboard page
 
   // Handle log expansion toggle with smooth animation
   const handleToggleExpand = (logId) => {
@@ -592,7 +483,7 @@ export default function Files() {
             <h2>My Logs</h2>
           </div>
           <div className="header-right">
-            <button className="upload-button" onClick={() => setShowUploadModal(true)}>Upload File</button>
+            <button className="upload-button" onClick={() => navigate('/dashboard')}>Upload Files in Dashboard</button>
             <button className="logout-button" onClick={handleLogout}>Logout</button>
           </div>
         </header>
@@ -761,107 +652,7 @@ export default function Files() {
         </div>
       </div>
       
-      {/* Upload File Modal */}
-      {showUploadModal && (
-        <div className="modal-overlay">
-          <div className="modal-container">
-            <div className="modal-header">
-              <h3>Upload New File</h3>
-              <button 
-                className="modal-close-button" 
-                onClick={() => {
-                  setShowUploadModal(false);
-                  setUploadedFile(null);
-                  setTopic('');
-                  setHours(1);
-                  setUploadProgress(0);
-                }}
-              >
-                &times;
-              </button>
-            </div>
-            <div className="modal-body">
-              <form onSubmit={handleUploadFile}>
-                <div className="form-group">
-                  <label htmlFor="file-upload">Select File</label>
-                  <input 
-                    type="file" 
-                    id="file-upload" 
-                    onChange={handleFileSelect} 
-                    ref={fileInputRef}
-                    required 
-                  />
-                  {uploadedFile && (
-                    <div className="selected-file">
-                      <span className="file-icon">{getFileIcon(uploadedFile.type)}</span>
-                      <span className="file-name">{uploadedFile.name}</span>
-                      <span className="file-size">({getFileSize(uploadedFile.size)})</span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="topic">Study Topic</label>
-                  <input 
-                    type="text" 
-                    id="topic" 
-                    value={topic} 
-                    onChange={(e) => setTopic(e.target.value)} 
-                    placeholder="What did you study?" 
-                    required 
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="hours">Hours Studied</label>
-                  <input 
-                    type="number" 
-                    id="hours" 
-                    value={hours} 
-                    onChange={(e) => setHours(Math.max(0.1, Number(e.target.value)))} 
-                    min="0.1" 
-                    step="0.1" 
-                    required 
-                  />
-                </div>
-                
-                {uploadProgress > 0 && uploadProgress < 100 && (
-                  <div className="upload-progress">
-                    <div 
-                      className="progress-bar" 
-                      style={{ width: `${uploadProgress}%` }}
-                    ></div>
-                    <span className="progress-text">{Math.round(uploadProgress)}%</span>
-                  </div>
-                )}
-                
-                <div className="modal-actions">
-                  <button 
-                    type="button" 
-                    className="cancel-button" 
-                    onClick={() => {
-                      setShowUploadModal(false);
-                      setUploadedFile(null);
-                      setTopic('');
-                      setHours(1);
-                      setUploadProgress(0);
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="upload-submit-button" 
-                    disabled={!uploadedFile || !topic.trim() || hours <= 0 || loading}
-                  >
-                    {loading ? 'Uploading...' : 'Upload'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Upload functionality removed - users are redirected to Dashboard for file uploads */}
       
       {/* Rename File Modal */}
       {showRenameModal && selectedFile && selectedFile.file && (

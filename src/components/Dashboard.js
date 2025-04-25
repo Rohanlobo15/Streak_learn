@@ -632,9 +632,21 @@ export default function Dashboard() {
       logsSnapshot.forEach(doc => {
         const logData = doc.data();
         if (logData.file) {
+          // Check if the doc.id is a valid date format (YYYY-MM-DD) or extract timestamp from log_ID format
+          let dateValue = doc.id;
+          if (doc.id.startsWith('log_')) {
+            // Extract the timestamp part and create a proper date
+            const timestamp = doc.id.split('log_')[1];
+            if (timestamp && !isNaN(Number(timestamp))) {
+              // Convert timestamp to a proper date string
+              const date = new Date(Number(timestamp));
+              dateValue = formatDate(date);
+            }
+          }
+          
           files.push({
             ...logData.file,
-            date: doc.id
+            date: dateValue
           });
         }
       });
