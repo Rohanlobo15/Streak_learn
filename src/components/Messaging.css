@@ -232,37 +232,46 @@
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
+  height: 100vh;
+  background-color: #ffffff;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .members-sidebar {
-  width: 150px;
+  width: 200px;
   background-color: #fff;
   border-right: 1px solid #e6e9f0;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  height: 100%;
 }
 
 .members-title {
-  padding: 0.75rem;
+  padding: 1rem;
   margin: 0;
-  font-size: 1rem;
-  color: #32325d;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #4a6bff;
   border-bottom: 1px solid #e6e9f0;
+  text-align: center;
 }
 
 .members-list {
-  padding: 0.5rem;
+  padding: 1rem;
   overflow-y: auto;
+  flex: 1;
 }
 
 .member-item {
   display: flex;
   align-items: center;
-  padding: 0.5rem;
+  padding: 0.75rem;
   border-radius: 8px;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
   transition: background-color 0.2s;
+  background-color: #f8f9fa;
 }
 
 .member-item:hover {
@@ -274,18 +283,19 @@
 }
 
 .member-avatar {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background-color: #5e72e4;
+  background-color: #4a6bff;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-right: 0.5rem;
+  margin-right: 0.75rem;
   color: white;
   font-weight: bold;
   overflow: hidden;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
+  flex-shrink: 0;
 }
 
 .member-avatar.empty {
@@ -308,20 +318,24 @@
 }
 
 .chat-area {
-  flex: 1.5;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: #f5f7fb;
+  background-color: #f8f9fa;
   overflow: hidden;
+  height: 100%;
+  border-radius: 0;
+  position: relative;
 }
 
 .messages-container {
   flex: 1;
-  padding: 1rem;
+  padding: 1.5rem 1.5rem 4rem 1.5rem;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 180px);
+  height: 100%;
+  width: 100%;
 }
 
 .loading-messages, .no-messages {
@@ -335,6 +349,7 @@
 
 .message-group {
   margin-bottom: 1rem;
+  width: 100%;
 }
 
 .message-date {
@@ -366,7 +381,7 @@
 .message {
   display: flex;
   margin-bottom: 0.5rem;
-  max-width: 85%;
+  max-width: 70%;
   animation: fadeIn 0.3s ease-in-out;
 }
 
@@ -384,6 +399,8 @@
 .message.sent {
   align-self: flex-end;
   flex-direction: row-reverse;
+  margin-left: auto;
+  margin-right: 0;
 }
 
 .message.received {
@@ -391,7 +408,7 @@
 }
 
 .message.system {
-  align-self: center;
+  align-self: flex-start;
   max-width: 90%;
   margin: 1rem 0;
 }
@@ -423,16 +440,43 @@
 }
 
 .message-bubble {
-  background-color: white;
-  border-radius: 18px;
   padding: 0.75rem 1rem;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  border-radius: 18px;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   position: relative;
+  max-width: 100%;
+  word-break: break-word;
 }
 
 .message.sent .message-bubble {
-  background-color: #5e72e4;
+  background-color: #4a6bff;
   color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.message.received {
+  align-self: flex-start;
+  margin-right: auto;
+  margin-left: 0;
+}
+
+.message.received .message-bubble {
+  border-bottom-left-radius: 4px;
+  background-color: #f0f2f5;
+  color: #333;
+}
+
+.message.system .message-bubble {
+  background-color: #f8f9fe;
+  border: 1px dashed #e6e9f0;
+  color: #8898aa;
+  font-style: italic;
+  box-shadow: none;
+  max-width: 100%;
+  text-align: left;
+  margin: 0;
+  border-bottom-left-radius: 4px;
 }
 
 .system-message {
@@ -560,9 +604,17 @@
 }
 
 .message-input-form {
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   background-color: white;
   border-top: 1px solid #e6e9f0;
+  flex-shrink: 0;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 10;
+  margin: 0;
 }
 
 .selected-file {
@@ -614,9 +666,11 @@
 .message-input-container {
   display: flex;
   align-items: center;
-  background-color: #f5f7fb;
+  background-color: #f0f2f5;
   border-radius: 24px;
-  padding: 0.25rem;
+  padding: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  width: 100%;
 }
 
 .attach-button {
