@@ -473,11 +473,22 @@ body {
   width: 100%;
 }
 
+@media (max-width: 768px) {
+  .leaderboards-container {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+}
+
 .leaderboard-section {
   background-color: white;
   border-radius: 8px;
-  padding: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 0;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
 }
 
 .leaderboard-section h2 {
@@ -1534,6 +1545,22 @@ body {
   
   .form-group label {
     font-size: 0.9rem;
+  }
+  
+  .leaderboards-container {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .leaderboard-section {
+    padding: 12px;
+    margin-bottom: 0;
+  }
+  
+  .leaderboard-section h2 {
+    font-size: 1rem;
+    text-align: center;
+    margin-bottom: 10px;
   }
   
   /* Specific improvements for Nothing Phone 1 */
