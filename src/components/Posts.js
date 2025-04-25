@@ -572,7 +572,8 @@ export default function Posts() {
           <ul>
             <li><button className="nav-button" onClick={() => navigate('/dashboard')}>🏠 <span>Dashboard</span></button></li>
             <li><button className="nav-button" onClick={() => navigate('/messaging')}>✉️ <span>Messages</span></button></li>
-            <li><button className="nav-button" onClick={() => navigate('/files')}>📂 <span>Files</span></button></li>
+            <li><button className="nav-button" onClick={() => navigate('/files')}>📋 <span>Logs</span></button></li>
+            <li><button className="nav-button" onClick={() => navigate('/deadlines')}>📅 <span>Deadlines</span></button></li>
             <li><button className="nav-button active" onClick={() => navigate('/posts')}>📝 <span>Posts</span></button></li>
           </ul>
         </nav>

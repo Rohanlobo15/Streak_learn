@@ -429,11 +429,8 @@ export default function Files() {
           &times;
         </button>
         <div className="sidebar-header">
-          <div className={`profile-section ${profileSectionOpen ? 'open' : ''}`}>
-            <div 
-              className="profile-photo-container" 
-              onClick={() => setProfileSectionOpen(!profileSectionOpen)}
-            >
+          <div className="profile-section">
+            <div className="profile-photo-container">
               {currentUser?.photoURL ? (
                 <img 
                   src={currentUser.photoURL} 
@@ -456,8 +453,9 @@ export default function Files() {
           <ul>
             <li><button className="nav-button" onClick={() => navigate('/dashboard')}>🏠 <span>Dashboard</span></button></li>
             <li><button className="nav-button" onClick={() => navigate('/messaging')}>✉️ <span>Messages</span></button></li>
-            <li><button className="nav-button active" onClick={() => navigate('/files')}>📋 <span>My Logs</span></button></li>
-            <li><button className="nav-button" onClick={() => navigate('/posts')}>📝 <span>Posts</span></button></li>
+            <li><button className="nav-button" onClick={() => navigate('/files')}>📋 <span>Logs</span></button></li>
+            <li><button className="nav-button" onClick={() => navigate('/deadlines')}>📅 <span>Deadlines</span></button></li>
+            <li><button className="nav-button active" onClick={() => navigate('/posts')}>📝 <span>Posts</span></button></li>
           </ul>
         </nav>
       </div>
@@ -480,7 +478,7 @@ export default function Files() {
               <span></span>
               <span></span>
             </button>
-            <h2>My Logs</h2>
+            <h2>Logs</h2>
           </div>
           <div className="header-right">
             <button className="upload-button" onClick={() => navigate('/dashboard')}>Upload Files in Dashboard</button>

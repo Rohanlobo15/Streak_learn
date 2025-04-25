@@ -307,9 +307,11 @@ export default function Messaging() {
     fileInputRef.current.click();
   };
 
-  // Navigate back to dashboard
-  const goToDashboard = () => {
-    navigate('/dashboard');
+  // Toggle sidebar
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
   };
 
   // Format timestamp
@@ -398,20 +400,70 @@ export default function Messaging() {
 
   return (
     <div className="messaging-container">
-      {/* Header */}
-      <div className="messaging-header">
-        <div className="header-left">
-          <button className="back-button" onClick={goToDashboard}>
-            ← Back
-          </button>
-          <h1 className="messaging-title">Group Chat ({members.length}/7 Members)</h1>
+      {/* Sidebar */}
+      <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <button 
+          className="close-sidebar-button" 
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Close sidebar"
+        >
+          &times;
+        </button>
+        <div className="sidebar-header">
+          <div className="profile-section">
+            <div className="profile-photo-container">
+              {currentUser?.photoURL ? (
+                <img 
+                  src={currentUser.photoURL} 
+                  alt="Profile" 
+                  className="profile-photo" 
+                />
+              ) : (
+                <div className="profile-photo-placeholder">
+                  {currentUser?.email?.charAt(0).toUpperCase() || '?'}
+                </div>
+              )}
+            </div>
+            <div className="sidebar-user-info">
+              <h3>{currentUser?.role || 'User'}</h3>
+              <p className="user-email text-center">{currentUser?.email}</p>
+            </div>
+          </div>
         </div>
-        <div className="header-nav">
-          <button className="nav-link" onClick={() => navigate('/dashboard')}>Dashboard</button>
-          <button className="nav-link" onClick={() => navigate('/files')}>Files</button>
-          <button className="nav-link" onClick={() => navigate('/posts')}>Posts</button>
-        </div>
+        <nav className="sidebar-nav">
+          <ul>
+            <li><button className="nav-button" onClick={() => navigate('/dashboard')}>🏠 <span>Dashboard</span></button></li>
+            <li><button className="nav-button active" onClick={() => navigate('/messaging')}>✉️ <span>Messages</span></button></li>
+            <li><button className="nav-button" onClick={() => navigate('/files')}>📋 <span>Logs</span></button></li>
+            <li><button className="nav-button" onClick={() => navigate('/deadlines')}>📅 <span>Deadlines</span></button></li>
+            <li><button className="nav-button" onClick={() => navigate('/posts')}>📝 <span>Posts</span></button></li>
+          </ul>
+        </nav>
       </div>
+      
+      {/* Overlay */}
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)}></div>}
+      
+      <header className="messaging-header">
+        <div className="header-left">
+          <button 
+            className="hamburger-menu" 
+            onClick={toggleSidebar}
+            aria-label="Toggle menu"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          <h2>Group Chat</h2>
+        </div>
+        <div className="header-right">
+          <div className="members-count">
+            <span className="members-icon">👥</span>
+            <span className="count">{members.length}/7</span>
+          </div>
+        </div>
+      </header>
 
       {/* Error message */}
       {error && <div className="error-message">{error}</div>}
@@ -562,13 +614,7 @@ export default function Messaging() {
           </form>
         </div>
       </div>
-      <nav className="sidebar-nav">
-        <ul>
-          <li><button className="nav-button" onClick={() => navigate('/dashboard')}>🏠 <span>Dashboard</span></button></li>
-          <li><button className="nav-button active" onClick={() => navigate('/messaging')}>✉️ <span>Messages</span></button></li>
-          <li><button className="nav-button" onClick={() => navigate('/files')}>📂 <span>Files</span></button></li>
-        </ul>
-      </nav>
+
     </div>
   );
 }
