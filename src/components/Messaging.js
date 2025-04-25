@@ -111,6 +111,15 @@ export default function Messaging() {
             photoURL: currentUser.photoURL || null,
             joinedAt: serverTimestamp()
           });
+        } else {
+          // Member exists, check if profile photo is changed or removed
+          const existingPhotoURL = memberDoc.data().photoURL || null;
+          const newPhotoURL = currentUser.photoURL || null;
+          if (existingPhotoURL !== newPhotoURL) {
+            await setDoc(memberRef, {
+              photoURL: newPhotoURL
+            }, { merge: true });
+          }
         }
       } catch (error) {
         console.error('Error adding member:', error);
