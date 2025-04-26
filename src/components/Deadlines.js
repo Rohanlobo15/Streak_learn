@@ -19,6 +19,7 @@ import {
   where,
   serverTimestamp
 } from 'firebase/firestore';
+import { enableNotifications, disableNotifications, areNotificationsEnabled } from '../services/NotificationService';
 import './Deadlines.css';
 
 export default function Deadlines() {
@@ -37,6 +38,7 @@ export default function Deadlines() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedDeadline, setSelectedDeadline] = useState(null);
   const [userRoles, setUserRoles] = useState({});
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   // Fetch all user roles for display
   const fetchUserRoles = async () => {
@@ -301,8 +303,37 @@ export default function Deadlines() {
   // State for toggle view between create and view
   const [activeView, setActiveView] = useState('view'); // 'create' or 'view'
 
+  // Check notification status
+  useEffect(() => {
+    if (currentUser) {
+      areNotificationsEnabled(currentUser.uid)
+        .then(enabled => {
+          setNotificationsEnabled(enabled);
+        })
+        .catch(error => {
+          console.error('Error checking notification status:', error);
+        });
+    }
+  }, [currentUser]);
+
+  // Toggle notifications
+  const handleToggleNotifications = async () => {
+    try {
+      if (notificationsEnabled) {
+        await disableNotifications(currentUser.uid);
+        setNotificationsEnabled(false);
+      } else {
+        await enableNotifications(currentUser.uid);
+        setNotificationsEnabled(true);
+      }
+    } catch (error) {
+      console.error('Error toggling notifications:', error);
+      setError('Failed to update notification settings');
+    }
+  };
+
   return (
-    <div className="deadlines-container">
+    <div className={`deadlines-container ${darkMode ? 'dark-mode' : 'light-mode'}`}>
       {/* Sidebar */}
       <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <button 
@@ -349,6 +380,32 @@ export default function Deadlines() {
               <span className="theme-toggle-text">{darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span>
               <span className="theme-toggle-icon">{darkMode ? '☀️' : '🌙'}</span>
             </button>
+          </div>
+          <div className="sidebar-section">
+            <h3>Settings</h3>
+            <div className="sidebar-item">
+              <span>Dark Mode</span>
+              <label className="switch">
+                <input 
+                  type="checkbox" 
+                  checked={darkMode}
+                  onChange={toggleTheme}
+                />
+                <span className="slider round"></span>
+              </label>
+            </div>
+            
+            <div className="sidebar-item">
+              <span>Deadline Notifications</span>
+              <label className="switch">
+                <input 
+                  type="checkbox" 
+                  checked={notificationsEnabled}
+                  onChange={handleToggleNotifications}
+                />
+                <span className="slider round"></span>
+              </label>
+            </div>
           </div>
         </nav>
       </div>

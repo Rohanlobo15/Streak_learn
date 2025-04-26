@@ -22,6 +22,7 @@ import {
   uploadBytesResumable, 
   getDownloadURL
 } from 'firebase/storage';
+import { enableNotifications, disableNotifications, areNotificationsEnabled } from '../services/NotificationService';
 import './Messaging.css';
 
 export default function Messaging() {
@@ -36,6 +37,7 @@ export default function Messaging() {
   const [file, setFile] = useState(null);
   const [fileUploadProgress, setFileUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -49,6 +51,15 @@ export default function Messaging() {
       navigate('/login');
       return;
     }
+
+    // Check notification status
+    areNotificationsEnabled(currentUser.uid)
+      .then(enabled => {
+        setNotificationsEnabled(enabled);
+      })
+      .catch(error => {
+        console.error('Error checking notification status:', error);
+      });
 
     // Check if group chat exists, if not create it
     const initializeGroupChat = async () => {
@@ -325,6 +336,22 @@ export default function Messaging() {
     setSidebarOpen(!sidebarOpen);
   };
 
+  // Toggle notifications
+  const handleToggleNotifications = async () => {
+    try {
+      if (notificationsEnabled) {
+        await disableNotifications(currentUser.uid);
+        setNotificationsEnabled(false);
+      } else {
+        await enableNotifications(currentUser.uid);
+        setNotificationsEnabled(true);
+      }
+    } catch (error) {
+      console.error('Error toggling notifications:', error);
+      setError('Failed to update notification settings');
+    }
+  };
+
   // Format timestamp
   const formatTime = (timestamp) => {
     return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -410,7 +437,7 @@ export default function Messaging() {
   const messageGroups = groupMessagesByDate();
 
   return (
-    <div className="messaging-container">
+    <div className={`messaging-container ${darkMode ? 'dark-mode' : 'light-mode'}`}>
       {/* Sidebar */}
       <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <button 
@@ -454,6 +481,32 @@ export default function Messaging() {
               <span className="theme-toggle-text">{darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span>
               <span className="theme-toggle-icon">{darkMode ? '☀️' : '🌙'}</span>
             </button>
+          </div>
+          <div className="sidebar-section">
+            <h3>Settings</h3>
+            <div className="sidebar-item">
+              <span>Dark Mode</span>
+              <label className="switch">
+                <input 
+                  type="checkbox" 
+                  checked={darkMode}
+                  onChange={toggleTheme}
+                />
+                <span className="slider round"></span>
+              </label>
+            </div>
+            
+            <div className="sidebar-item">
+              <span>Message Notifications</span>
+              <label className="switch">
+                <input 
+                  type="checkbox" 
+                  checked={notificationsEnabled}
+                  onChange={handleToggleNotifications}
+                />
+                <span className="slider round"></span>
+              </label>
+            </div>
           </div>
         </nav>
       </div>

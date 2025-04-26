@@ -1,7 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, getDoc, writeBatch, enableIndexedDbPersistence } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, writeBatch } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getMessaging } from 'firebase/messaging';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDPwHTBl1cquIIVBXIVyntES7_wyXv4XIw",
@@ -15,20 +16,19 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Auth and Firestore
+// Initialize services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-// Enable offline persistence
-enableIndexedDbPersistence(db)
-  .catch((err) => {
-    if (err.code === 'failed-precondition') {
-      console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-    } else if (err.code === 'unimplemented') {
-      console.log('The current browser does not support offline persistence');
-    }
-  });
+// Initialize messaging (wrapped in try-catch as it might fail in some browsers)
+let messagingInstance = null;
+try {
+  messagingInstance = getMessaging(app);
+} catch (error) {
+  console.log('Firebase messaging not supported or blocked');
+}
+export const messaging = messagingInstance;
 
 // Initialize roles collection
 export const initializeRoles = async () => {
