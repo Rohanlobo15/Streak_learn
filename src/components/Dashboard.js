@@ -1199,12 +1199,20 @@ export default function Dashboard() {
         </button>
         <div className="sidebar-header">
           <div className="profile-section">
-            <div className="profile-photo-container">
+            <div className="profile-photo-container" style={{ display: 'block', position: 'relative', zIndex: 50 }}>
               {currentUser?.photoURL ? (
                 <img 
                   src={currentUser.photoURL} 
                   alt="Profile" 
                   className="profile-photo" 
+                  style={{ 
+                    display: 'block', 
+                    width: '100%', 
+                    height: '100%', 
+                    objectFit: 'cover',
+                    borderRadius: '50%',
+                    border: '2px solid #4a6bff'
+                  }}
                 />
               ) : (
                 <div className="profile-photo-placeholder">

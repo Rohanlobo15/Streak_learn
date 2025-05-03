@@ -865,6 +865,7 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .profile-photo-placeholder {
@@ -1317,27 +1318,43 @@ body {
 
 @media (max-width: 768px) {
   .profile-section {
-    max-height: 0;
-    padding: 0;
-    opacity: 0;
-  }
-  
-  .profile-section.open {
-    max-height: 300px;
-    padding: 1rem;
+    overflow: visible;
+    transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
     opacity: 1;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
   }
   
   .sidebar.open .profile-section {
-    max-height: 0;
-    padding: 0;
-    opacity: 0;
+    max-height: 300px;
+    padding: 1rem;
+    opacity: 1;
+    display: block;
   }
   
   .sidebar.open .profile-section.open {
     max-height: 300px;
     padding: 1rem;
     opacity: 1;
+    display: block;
+  }
+}
+
+@media (max-width: 770px) {
+  .profile-section {
+    padding: 0.5rem;
+  }
+  
+  .profile-photo-container {
+    width: 70px;
+    height: 70px;
+    margin: 0 auto 8px;
+    display: block;
+    position: relative;
+    z-index: 10;
   }
 }
 
@@ -1545,6 +1562,28 @@ body {
   
   .form-group label {
     font-size: 0.9rem;
+  }
+  
+  /* Fix for profile photo in mobile view */
+  .profile-photo-container {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 8px;
+    display: flex;
+    z-index: 200;
+  }
+  
+  .profile-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  
+  .profile-photo-placeholder {
+    width: 100%;
+    height: 100%;
+    font-size: 1.5rem;
   }
   
   .leaderboards-container {
