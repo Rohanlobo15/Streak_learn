@@ -95,15 +95,18 @@ export default function Dashboard() {
   };
 
   // Load user data and stats on component mount
-  // Function to update all users' streak data and study time for April 23rd and 24th, 2025
+  // Function to initialize streak data if needed - starts from today
   const updateAllUsersStreakData = async () => {
     try {
       // Get all roles to find all users
       const rolesRef = collection(db, 'roles');
       const rolesSnapshot = await getDocs(rolesRef);
       
-      // Dates to add streaks for
-      const streakDates = ['2025-04-23', '2025-04-24'];
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date();
+      const todayFormatted = today.toISOString().split('T')[0];
+      
+      console.log(`Initializing streak data with today's date: ${todayFormatted}`);
       
       // Process each role/user
       for (const roleDoc of rolesSnapshot.docs) {
@@ -111,78 +114,36 @@ export default function Dashboard() {
           const userId = roleDoc.data().userId;
           const roleName = roleDoc.id;
           
-          console.log(`Updating data for ${roleName} (${userId})`);
-          
           // Get current user streak
           const userDocRef = doc(db, 'users', userId);
           const userDoc = await getDoc(userDocRef);
           
           if (userDoc.exists()) {
-            // Current streak value
-            let currentStreak = userDoc.data().streak || 0;
-            
-            // Update streak for each date
-            for (const date of streakDates) {
-              // Check if streak history already exists for this date
-              const streakHistoryRef = doc(db, 'users', userId, 'streakHistory', date);
-              const streakHistoryDoc = await getDoc(streakHistoryRef);
+            // Check if user already has streak data
+            if (!userDoc.data().streak) {
+              console.log(`Initializing streak data for ${roleName} (${userId})`);
               
-              if (!streakHistoryDoc.exists()) {
-                // Increment streak
-                currentStreak += 1;
-                
-                // Add to streak history
-                await setDoc(streakHistoryRef, {
-                  streak: currentStreak,
-                  date: date
-                });
-                
-                console.log(`Added streak for ${roleName} on ${date}`);
-              } else {
-                console.log(`Streak already exists for ${roleName} on ${date}`);
-              }
-              
-              // Add 2 hours of study time for April 23rd
-              if (date === '2025-04-23') {
-                const studyLogRef = doc(db, 'studyLogs', userId, 'logs', date);
-                const studyLogDoc = await getDoc(studyLogRef);
-                
-                if (!studyLogDoc.exists()) {
-                  // Add study log with 2 hours
-                  await setDoc(studyLogRef, {
-                    hours: 2,
-                    topic: 'Study Session',
-                    timestamp: Timestamp.now(),
-                    lastUpdated: Timestamp.now()
-                  });
-                  
-                  console.log(`Added 2 hours study time for ${roleName} on ${date}`);
-                } else {
-                  console.log(`Study log already exists for ${roleName} on ${date}`);
-                }
-              }
+              // Initialize streak to 0
+              await setDoc(userDocRef, {
+                streak: 0,
+                lastStudyDate: null
+              }, { merge: true });
+            } else {
+              console.log(`User ${roleName} already has streak data, skipping initialization`);
             }
-            
-            // Update user's current streak
-            await setDoc(userDocRef, {
-              streak: currentStreak,
-              lastStudyDate: streakDates[streakDates.length - 1]
-            }, { merge: true });
-            
-            console.log(`Updated streak for ${roleName} to ${currentStreak}`);
           }
         }
       }
       
-      console.log('Data update completed for all users');
+      console.log('Streak data initialization completed');
       // Refresh data after update
       await fetchAllRolesStreakHistory();
       await fetchLeaderboards();
       await fetchStudyTimeData();
       
     } catch (error) {
-      console.error('Error updating user data:', error);
-      setError('Failed to update user data');
+      console.error('Error initializing streak data:', error);
+      setError('Failed to initialize streak data');
     }
   };
 

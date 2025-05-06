@@ -10,7 +10,7 @@ const firebaseConfig = {
   projectId: "mine-805ba",
   storageBucket: "mine-805ba.firebasestorage.app",
   messagingSenderId: "755696512125",
-  appId: "1:755696512125:web:2b575ce3d65aa82cae1514"
+  appId: "1:755696512125:web:555b2a35c1e63c30ae1514"
 };
 
 // Initialize Firebase
@@ -45,7 +45,8 @@ export const initializeRoles = async () => {
   try {
     // Check online status
     if (!window.navigator.onLine) {
-      throw new Error('No internet connection');
+      console.warn('No internet connection, skipping role initialization');
+      return;
     }
 
     // Use getDoc to check if each role exists before initializing
@@ -56,25 +57,34 @@ export const initializeRoles = async () => {
     
     // Process each role one by one to check if it exists
     for (const role of roles) {
-      const roleRef = doc(db, 'roles', role);
-      const roleDoc = await getDoc(roleRef);
-      
-      // Only initialize the role if it doesn't exist
-      if (!roleDoc.exists()) {
-        batch.set(roleRef, { taken: false, userId: null });
-        batchHasOperations = true;
+      try {
+        const roleRef = doc(db, 'roles', role);
+        const roleDoc = await getDoc(roleRef);
+        
+        // Only initialize the role if it doesn't exist
+        if (!roleDoc.exists()) {
+          batch.set(roleRef, { taken: false, userId: null });
+          batchHasOperations = true;
+        }
+      } catch (roleError) {
+        console.warn(`Error checking role ${role}:`, roleError);
+        // Continue with other roles
       }
     }
     
     // Commit the batch if there are any operations
     if (batchHasOperations) {
-      await batch.commit();
-      console.log('New roles initialized successfully');
+      try {
+        await batch.commit();
+        console.log('New roles initialized successfully');
+      } catch (commitError) {
+        console.error('Error committing role batch:', commitError);
+      }
     } else {
       console.log('All roles already exist, no initialization needed');
     }
   } catch (error) {
     console.error('Error initializing roles:', error);
-    throw error; // Re-throw to handle in component
+    // Don't throw, just log the error to prevent app crashes
   }
 };
