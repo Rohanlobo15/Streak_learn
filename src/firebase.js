@@ -5,12 +5,7 @@ import { getStorage } from 'firebase/storage';
 import { getMessaging } from 'firebase/messaging';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDPwHTBl1cquIIVBXIVyntES7_wyXv4XIw",
-  authDomain: "mine-805ba.firebaseapp.com",
-  projectId: "mine-805ba",
-  storageBucket: "mine-805ba.firebasestorage.app",
-  messagingSenderId: "755696512125",
-  appId: "1:755696512125:web:555b2a35c1e63c30ae1514"
+  
 };
 
 // Initialize Firebase
