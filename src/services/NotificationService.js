@@ -15,7 +15,7 @@ import { getAuth } from 'firebase/auth';
 import { db, auth } from '../firebase';
 
 // VAPID key from Firebase Cloud Messaging
-const VAPID_KEY = "BKXQAXaxdXt9qgZmu6sfiDrYJrv16MI7YIEq35Znn09rDxGL3W0W56rwS_f1youb303G6TC7YZLc4A_gRZ7zBaQ";
+const VAPID_KEY = "";
 
 // Get messaging instance
 let messaging;
