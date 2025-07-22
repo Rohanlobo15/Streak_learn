@@ -24,17 +24,6 @@
 
 ---
 
-## 🖼️ Visual Overview
-
-![Dashboard Screenshot](docs/dashboard_screenshot.png)
-
-*Add screenshots or animated GIFs of your app here. For example:*
-- Dashboard
-- Messaging
-- Calendar
-
----
-
 ## ✨ Features
 
 - 🔒 **Authentication** (Email/Password via Firebase)
